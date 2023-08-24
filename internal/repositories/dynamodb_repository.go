@@ -50,11 +50,15 @@ func (repo *DynamoDBRepository) CreateUser(user *models.User) error {
 //Update a given user field with a given value
 //Casts the value to the correct type for the DynamoDB table
 func (repo *DynamoDBRepository) UpdateUserField(username, fieldName string, value interface{}) error {
-    updateExpression := "SET " + fieldName + " = :val"
+    updateExpression := "SET #fieldName = :val"  // Use an expression attribute name for the field name
 
     attrValue, err := dynamodbattribute.Marshal(value)
     if err != nil {
         return err
+    }
+
+    expressionAttributeNames := map[string]*string{
+        "#fieldName": aws.String(fieldName),  // Use the actual field name as the alias
     }
 
     input := &dynamodb.UpdateItemInput{
@@ -62,6 +66,7 @@ func (repo *DynamoDBRepository) UpdateUserField(username, fieldName string, valu
         Key: map[string]*dynamodb.AttributeValue{
             "username": {S: aws.String(username)},
         },
+        ExpressionAttributeNames:  expressionAttributeNames,
         ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
             ":val": attrValue,
         },
@@ -75,6 +80,7 @@ func (repo *DynamoDBRepository) UpdateUserField(username, fieldName string, valu
 
     return nil
 }
+
 
 
 func (repo *DynamoDBRepository) GetAllUsers() ([]models.User, error) {

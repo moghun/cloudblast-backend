@@ -2,10 +2,14 @@ package services
 
 import (
 	"encoding/json"
+	"goodBlast-backend/internal/auth"
+	"goodBlast-backend/internal/models"
 	"goodBlast-backend/internal/repositories"
 	"log"
 
+	"github.com/google/uuid"
 	"github.com/streadway/amqp"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UserService struct {
@@ -30,6 +34,19 @@ func NewUserService(conn *amqp.Connection) (*UserService, error) {
 		channel:     channel,
 		dynamoDBRepo: dynamoDBRepo,
 	}, nil
+}
+
+func hashPassword(password string) (string, error) {
+    hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+    if err != nil {
+        return "", err
+    }
+    return string(hashedPassword), nil
+}
+
+func checkPasswordHash(password, hashedPassword string) bool {
+    err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+    return err == nil
 }
 
 func (uh *UserService) Start() {
@@ -81,8 +98,14 @@ func (uh *UserService) Start() {
 		}
 
 		switch action {
+		case "Login":
+			uh.HandleLogin(msg.Body, msg.ReplyTo, msg.CorrelationId)
 		case "SearchUser":
 			uh.HandleSearchUser(msg.Body, msg.ReplyTo, msg.CorrelationId)
+		case "CreateUser":
+			uh.HandleCreateUser(msg.Body, msg.ReplyTo, msg.CorrelationId)
+		case "UpdateProgress":
+			uh.HandleUpdateProgress(msg.Body, msg.ReplyTo, msg.CorrelationId)
 		default:
 			log.Printf("Unknown action: %s", action)
 		}
@@ -97,10 +120,6 @@ func (uh *UserService) Stop() {
 }
 
 func (uh *UserService) HandleUpdateUser(b []byte) {
-	panic("unimplemented")
-}
-
-func (uh *UserService) HandleCreateUser(b []byte) {
 	panic("unimplemented")
 }
 
@@ -155,4 +174,211 @@ func (uh *UserService) HandleSearchUser(data []byte, replyTo string, correlation
 	}
 
 	log.Printf("User data: %+v", user)
+}
+
+
+func (uh *UserService) HandleCreateUser(data []byte, replyTo string, correlationID string) {
+    var requestData struct {
+        Action   string `json:"action"`
+        Username string `json:"username"`
+        Password string `json:"password"`
+    }
+
+    err := json.Unmarshal(data, &requestData)
+    if err != nil {
+        log.Printf("Failed to unmarshal data: %v", err)
+        return
+    }
+
+    // Check if the username already exists
+    existingUser, err := uh.dynamoDBRepo.GetUserByUsername(requestData.Username)
+    if err != nil {
+        log.Printf("Error fetching user: %v", err)
+        return
+    }
+    if existingUser != nil {
+        sendResponse(uh.channel, replyTo, correlationID, "CreateUserResponse", struct {
+            Error string `json:"error"`
+        }{
+            Error: "Username already exists",
+        })
+        return
+    }
+
+    // Hash the password
+    hashedPassword, err := hashPassword(requestData.Password)
+    if err != nil {
+        log.Printf("Failed to hash password: %v", err)
+        return
+    }
+
+    // Generate a unique identifier
+    uniqueID := uuid.New().String()
+
+    // Create the user object
+    user := models.User{
+        ID:       uniqueID,
+        Username: requestData.Username,
+        Password: hashedPassword,
+        Progress_Level:    1,
+        Coins:    100,
+        Latest_Tournament_ID: -1,
+    }
+
+    // Create user in the database
+    err = uh.dynamoDBRepo.CreateUser(&user)
+    if err != nil {
+        log.Printf("Error creating user: %v", err)
+        return
+    }
+
+    sendResponse(uh.channel, replyTo, correlationID, "CreateUserResponse", struct {
+        UserID string `json:"user_id"`
+    }{
+        UserID: uniqueID,
+    })
+
+    log.Printf("User created: %+v", user)
+}
+
+func (uh *UserService) HandleLogin(data []byte, replyTo string, correlationID string) {
+    var requestData struct {
+        Action   string `json:"action"`
+        Username string `json:"username"`
+        Password string `json:"password"`
+    }
+
+    err := json.Unmarshal(data, &requestData)
+    if err != nil {
+        log.Printf("Failed to unmarshal data: %v", err)
+        return
+    }
+
+    user, err := uh.dynamoDBRepo.GetUserByUsername(requestData.Username)
+    if err != nil {
+        log.Printf("Error fetching user: %v", err)
+        return
+    }
+
+    if user == nil {
+        sendResponse(uh.channel, replyTo, correlationID, "LoginResponse", struct {
+            Token  string `json:"token"`
+            Success bool `json:"success"`
+        }{
+            Token:  "",
+            Success: false,
+        })
+        return
+    }
+
+    if !checkPasswordHash(requestData.Password, user.Password) {
+        sendResponse(uh.channel, replyTo, correlationID, "LoginResponse", struct {
+            Token  string `json:"token"`
+            Success bool `json:"success"`
+        }{
+            Token:  "",
+            Success: false,
+        })
+        return
+    }
+
+    token, err := auth.CreateToken(user.Username)
+    if err != nil {
+        log.Fatalf("Failed to generate JWT token: %v", err)
+        return
+    }
+
+    sendResponse(uh.channel, replyTo, correlationID, "LoginResponse", struct {
+        Token  string `json:"token"`
+        Success bool `json:"success"`
+    }{
+        Token:  token,
+        Success: true,
+    })
+}
+// sendResponse sends a response back to the caller
+func sendResponse(ch *amqp.Channel, replyTo string, correlationID string, action string, data interface{}) {
+    responseData := struct {
+        Action string      `json:"action"`
+        Data   interface{} `json:"data"`
+    }{
+        Action: action,
+        Data:   data,
+    }
+
+    responseDataJSON, err := json.Marshal(responseData)
+    if err != nil {
+        log.Fatalf("Failed to encode response data to JSON: %v", err)
+        return
+    }
+
+    // Publish response to the replyTo queue
+    err = ch.Publish(
+        "",
+        replyTo,
+        false,
+        false,
+        amqp.Publishing{
+            ContentType:   "application/json",
+            CorrelationId: correlationID,
+            Body:          responseDataJSON,
+            Headers: amqp.Table{
+                "action": action,
+            },
+        },
+    )
+    if err != nil {
+        log.Fatalf("Failed to publish a response message: %v", err)
+    }
+}
+
+func (uh *UserService) HandleUpdateProgress(data []byte, replyTo string, correlationID string) {
+    var requestData struct {
+        Action   string `json:"action"`
+        Username string `json:"username"`
+    }
+
+    err := json.Unmarshal(data, &requestData)
+    if err != nil {
+        log.Printf("Failed to unmarshal data: %v", err)
+        return
+    }
+
+    user, err := uh.dynamoDBRepo.GetUserByUsername(requestData.Username)
+    if err != nil {
+        log.Printf("Error fetching user: %v", err)
+        return
+    }
+
+    if user == nil {
+        sendResponse(uh.channel, replyTo, correlationID, "UpdateProgressResponse", struct {
+            Progress_Level int `json:"progress_level"`
+            Coins int `json:"coins"`
+        }{
+            Progress_Level: 0,
+            Coins: 0,
+        })
+        return
+    }
+
+    // Update the user's progress
+    err = uh.dynamoDBRepo.UpdateUserField(user.Username, "progress_level", user.Progress_Level+1)
+    if err != nil {
+        log.Printf("Error updating user progress_level: %v", err)
+        return
+    }
+
+    err = uh.dynamoDBRepo.UpdateUserField(user.Username, "coins", user.Coins+100)
+    if err != nil {
+        log.Printf("Error updating user coins: %v", err)
+        return
+    }
+
+    sendResponse(uh.channel, replyTo, correlationID, "UpdateProgressResponse", struct {
+        Progress_Level int `json:"progress_level"`
+        Coins int `json:"coins"`
+    }{
+        Progress_Level: user.Progress_Level + 1,
+        Coins: user.Coins + 100,
+    })
 }
