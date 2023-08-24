@@ -35,7 +35,12 @@ func main() {
 
 	//Declare RabbitMQ queue
 	router := mux.NewRouter()
+	router.HandleFunc("/api/CreateUser", handlers.HandleCreateUserRoute(ch)).Methods("POST")
+	router.HandleFunc("/api/Login", handlers.HandleLoginRoute(ch)).Methods("POST")
 	router.HandleFunc("/api/SearchUser", handlers.HandleSearchUserRoute(ch)).Methods("POST")
+	router.HandleFunc("/api/UpdateProgress", handlers.HandleUpdateProgressRoute(ch)).Methods("POST")
+
+
 
 	//Start user service
 	userService, err := services.NewUserService(conn)
