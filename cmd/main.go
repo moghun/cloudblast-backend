@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"goodBlast-backend/internal/auth"
 	"goodBlast-backend/internal/handlers"
 	"goodBlast-backend/internal/services"
 	"log"
@@ -38,12 +39,12 @@ func main() {
 	router.HandleFunc("/api/CreateUser", handlers.HandleCreateUserRoute(ch)).Methods("POST")
 	router.HandleFunc("/api/Login", handlers.HandleLoginRoute(ch)).Methods("GET")
 	router.HandleFunc("/api/SearchUser", handlers.HandleSearchUserRoute(ch)).Methods("GET")
-	router.HandleFunc("/api/UpdateProgress", handlers.HandleUpdateProgressRoute(ch)).Methods("POST")
+	router.HandleFunc("/api/UpdateProgress", auth.AuthMiddleware(handlers.HandleUpdateProgressRoute(ch))).Methods("POST")
 	router.HandleFunc("/api/StartTournament", handlers.HandleStartTournamentRoute(ch)).Methods("POST")
-	router.HandleFunc("/api/EnterTournament", handlers.HandleEnterTournamentRoute(ch)).Methods("POST")
-	router.HandleFunc("/api/UpdateScore", handlers.HandleUpdateScoreRoute(ch)).Methods("POST")
+	router.HandleFunc("/api/EnterTournament", auth.AuthMiddleware(handlers.HandleEndTournamentRoute(ch))).Methods("POST")
+	router.HandleFunc("/api/UpdateScore", auth.AuthMiddleware(handlers.HandleSearchUserRoute(ch))).Methods("POST")
 	router.HandleFunc("/api/EndTournament", handlers.HandleEndTournamentRoute(ch)).Methods("POST")
-	router.HandleFunc("/api/ClaimReward", handlers.HandleClaimRewardRoute(ch)).Methods("POST")
+	router.HandleFunc("/api/ClaimReward", auth.AuthMiddleware(handlers.HandleClaimRewardRoute(ch))).Methods("POST")
 
 
 	//Start user service

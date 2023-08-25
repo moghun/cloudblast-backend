@@ -1,10 +1,11 @@
 package auth
 
 import (
-	"time"
 	"context"
 	"net/http"
 	"strings"
+	"time"
+
 	"github.com/dgrijalva/jwt-go"
 )
 
@@ -33,7 +34,7 @@ func extractTokenFromHeader(r *http.Request) string {
 	return tokenParts[1]
 }
 
-func AuthMiddleware(next http.Handler) http.Handler {
+func AuthMiddleware(next func(http.ResponseWriter, *http.Request)) func(http.ResponseWriter, *http.Request) {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		tokenString := extractTokenFromHeader(r)
 		if tokenString == "" {
@@ -58,6 +59,6 @@ func AuthMiddleware(next http.Handler) http.Handler {
 
 		r = r.WithContext(context.WithValue(r.Context(), "user", claims))
 
-		next.ServeHTTP(w, r)
+		next(w, r)
 	})
 }
