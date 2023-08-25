@@ -3,6 +3,7 @@ package services
 import (
 	"encoding/json"
 	"log"
+	"strconv"
 
 	"goodBlast-backend/internal/repositories"
 
@@ -12,11 +13,17 @@ import (
 type LeaderboardService struct {
 	conn        *amqp.Connection
 	channel     *amqp.Channel
+	dynamoDBRepo *repositories.DynamoDBRepository
 	redisRepo   *repositories.RedisRepo
 }
 
 func NewLeaderboardService(conn *amqp.Connection, redisAddr string) (*LeaderboardService, error) {
 	channel, err := conn.Channel()
+	if err != nil {
+		return nil, err
+	}
+
+	dynamoDBRepo, err := repositories.NewDynamoDBRepository()
 	if err != nil {
 		return nil, err
 	}
@@ -30,6 +37,7 @@ func NewLeaderboardService(conn *amqp.Connection, redisAddr string) (*Leaderboar
 	return &LeaderboardService{
 		conn:        conn,
 		channel:     channel,
+		dynamoDBRepo: dynamoDBRepo,
 		redisRepo:   redisRepo,
 	}, nil
 }
@@ -83,10 +91,16 @@ func (ls *LeaderboardService) Start() {
 		}
 
 		switch action {
-		case "createLeaderboard":
-			ls.HandleCreateLeaderboard(msg.Body, msg.ReplyTo, msg.CorrelationId)
-		case "deleteLeaderboard":
+		case "DeleteLeaderboard":
 			ls.HandleDeleteLeaderboard(msg.Body, msg.ReplyTo, msg.CorrelationId)
+		case "EnterLeaderboardGroup":
+			ls.HandleEnterLeaderboardGroup(msg.Body, msg.ReplyTo, msg.CorrelationId)
+		case "IncrementGroupScore":
+			ls.HandleIncrementGroupScore(msg.Body, msg.ReplyTo, msg.CorrelationId)
+		case "GetGroupUserRank":
+			ls.HandleGetGroupUserRank(msg.Body, msg.ReplyTo, msg.CorrelationId)
+		case "GetGroupLeaderboardWithRanks":
+			ls.HandleGetGroupLeaderboardWithRanks(msg.Body, msg.ReplyTo, msg.CorrelationId)
 		default:
 			log.Printf("Unknown action: %s", action)
 		}
@@ -99,27 +113,6 @@ func (ls *LeaderboardService) Stop() {
 	if err := ls.channel.Close(); err != nil {
 		log.Printf("Error closing channel: %v", err)
 	}
-}
-
-func (ls *LeaderboardService) HandleCreateLeaderboard(data []byte, replyTo string, correlationID string) {
-	var requestData struct {
-		Action          string `json:"action"`
-		LeaderboardName string `json:"tournament_id"`
-	}
-
-	err := json.Unmarshal(data, &requestData)
-	if err != nil {
-		log.Printf("Failed to unmarshal data: %v", err)
-		return
-	}
-
-	// Create a new leaderboard in Redis
-	err = ls.redisRepo.CreateLeaderboard(requestData.LeaderboardName)
-	if err != nil {
-		log.Printf("Error creating leaderboard: %v", err)
-		return
-	}
-	log.Printf("Created leaderboard %s", requestData.LeaderboardName)
 }
 
 func (ls *LeaderboardService) HandleDeleteLeaderboard(data []byte, replyTo string, correlationID string) {
@@ -135,10 +128,139 @@ func (ls *LeaderboardService) HandleDeleteLeaderboard(data []byte, replyTo strin
 	}
 
 	// Delete the specified leaderboard from Redis
-	err = ls.redisRepo.DeleteLeaderboard(requestData.LeaderboardName)
+	err = ls.redisRepo.DeleteLeaderboards(requestData.LeaderboardName)
 	if err != nil {
 		log.Printf("Error deleting leaderboard: %v", err)
 		return
 	}
 	log.Printf("Deleted leaderboard %s", requestData.LeaderboardName)
+}
+
+func (ls *LeaderboardService) HandleEnterLeaderboardGroup(data []byte, replyTo string, correlationID string) {
+	var requestData struct {
+		Action          string `json:"action"`
+		GroupID         string `json:"group_id"`
+		LeaderboardName string `json:"leaderboard_name"`
+		Username        string `json:"username"`
+		InitialScore    int    `json:"initial_score"`
+	}
+
+	err := json.Unmarshal(data, &requestData)
+	if err != nil {
+		log.Printf("Failed to unmarshal data: %v", err)
+		return
+	}
+
+	// Enter the leaderboard group for the specified user with an initial score
+	err = ls.redisRepo.EnterLeaderboardGroup(requestData.LeaderboardName, requestData.Username, requestData.InitialScore)
+	if err != nil {
+		log.Printf("Error entering leaderboard group: %v", err)
+		return
+	}
+	log.Printf("Entered leaderboard group: %s - %s - %s - %d", requestData.GroupID, requestData.LeaderboardName, requestData.Username, requestData.InitialScore)
+}
+
+func (ls *LeaderboardService) HandleIncrementGroupScore(data []byte, replyTo string, correlationID string) {
+	var requestData struct {
+		Action         string `json:"action"`
+		GroupID        int `json:"group_id"`
+		LeaderboardName string `json:"leaderboard_name"`
+		Username       string `json:"username"`
+	}
+
+	err := json.Unmarshal(data, &requestData)
+	if err != nil {
+		log.Printf("Failed to unmarshal data: %v", err)
+		return
+	}
+
+	// Increment the user's score in the specified leaderboard
+	err = ls.redisRepo.IncrementGroupScore(requestData.LeaderboardName, requestData.Username)
+	if err != nil {
+		log.Printf("Error incrementing user's score: %v", err)
+		return
+	}
+
+	log.Printf("Incremented score for user %s in leaderboard %s", requestData.Username, requestData.LeaderboardName)
+}
+
+func (ls *LeaderboardService) HandleGetGroupUserRank(data []byte, replyTo string, correlationID string) {
+	var requestData struct {
+		Action         string `json:"action"`
+		Username       string `json:"username"`
+	}
+	err := json.Unmarshal(data, &requestData)
+	if err != nil {
+		log.Printf("Failed to unmarshal data: %v", err)
+		return
+	}
+
+	latestTournamentID, err := ls.dynamoDBRepo.GetLatestTournamentForUser(requestData.Username)
+	if err != nil {
+		log.Printf("Error getting latest tournament for user: %v", err)
+		return
+	}
+
+	latestGroupID, err := ls.dynamoDBRepo.GetLatestGroupIdForUser(requestData.Username)
+	if err != nil {
+		log.Printf("Error getting latest group ID for user: %v", err)
+		return
+	}
+
+
+	newLeaderboardName := latestTournamentID + ":" + strconv.Itoa(latestGroupID)
+	// Get the user's rank in the specified leaderboard
+	rank, err := ls.redisRepo.GetGroupUserRank(newLeaderboardName, requestData.Username)
+	if err != nil {
+		log.Printf("Error getting user's rank: %v", err)
+		return
+	}
+
+	// Publish the user's rank as a response
+	sendResponse(ls.channel, replyTo, correlationID,"GetGroupUserRankResponse", struct {
+		Rank int64 `json:"rank"`
+	}{
+		Rank: rank,
+	})
+
+	log.Printf("User %s rank in leaderboard %s: %d", requestData.Username, newLeaderboardName, rank)
+}
+
+func (ls *LeaderboardService) HandleGetGroupLeaderboardWithRanks(data []byte, replyTo string, correlationID string) {
+	var requestData struct {
+		Action         string `json:"action"`
+		Username string `json:"username"`
+	}
+
+	err := json.Unmarshal(data, &requestData)
+	if err != nil {
+		log.Printf("Failed to unmarshal data: %v", err)
+		return
+	}
+
+	latestTournamentID, err := ls.dynamoDBRepo.GetLatestTournamentForUser(requestData.Username)
+	if err != nil {
+		log.Printf("Error getting latest tournament for user: %v", err)
+		return
+	}
+
+	latestGroupID, err := ls.dynamoDBRepo.GetLatestGroupIdForUser(requestData.Username)
+	if err != nil {
+		log.Printf("Error getting latest group ID for user: %v", err)
+		return
+	}
+
+	
+	newLeaderboardName := latestTournamentID + ":" + strconv.Itoa(latestGroupID)
+	log.Printf("Getting leaderboard for group %s", newLeaderboardName)
+
+	// Get the leaderboard with ranks for the specified group and leaderboard name
+	leaderboard, err := ls.redisRepo.GetGroupLeaderboardWithRanks(newLeaderboardName, 0, 34)
+	if err != nil {
+		log.Printf("Error getting group leaderboard: %v", err)
+		return
+	}
+
+	sendResponse(ls.channel, replyTo, correlationID,"GetGroupLeaderboardWithRanksResponse", leaderboard)
+
 }

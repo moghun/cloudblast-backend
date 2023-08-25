@@ -5,6 +5,7 @@ import (
 	"goodBlast-backend/internal/models"
 	"goodBlast-backend/internal/repositories"
 	"log"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -145,16 +146,6 @@ func (ts *TournamentService) HandleStartTournament(data []byte, replyTo string, 
 		return
 	}
 
-	action := "createLeaderboard" // Define the action
-    messageData := map[string]interface{}{
-        "action":       action,
-        "tournament_id": tournamentID, // Include the tournamentID here
-    }
-    // Publish the message to the "leaderboardQueue" with the publishToRabbitMQ function
-    publishToRabbitMQ(ts.channel, "leaderboardQueue", action, messageData, replyTo, correlationID)
-
-    log.Printf("Sent createLeaderboard action to LeaderboardService")
-
 	sendResponse(ts.channel, replyTo, correlationID, "StartTournamentResponse", struct {
 		TournamentID string `json:"tournament_id"`
 		StartTime    string `json:"start_time"`
@@ -226,6 +217,54 @@ func (ts *TournamentService) HandleEnterTournament(data []byte, replyTo string, 
         })
 		return
 	}
+
+    DidUserClaimReward, err := ts.dynamoDBRepo.DidUserClaimReward(requestData.Username)
+    if err != nil {
+        log.Printf("Failed to check if user claimed reward: %v", err)
+        sendResponse(ts.channel, replyTo, correlationID, "EnterTournamentResponse", struct {
+            Error string `json:"error"`
+        }{
+            Error: "Failed to check if user claimed reward",
+        })
+        return
+    }
+
+    if DidUserClaimReward {
+        log.Printf("User already claimed reward: %v", requestData.Username)
+        sendResponse(ts.channel, replyTo, correlationID, "EnterTournamentResponse", struct {
+            Error string `json:"error"`
+        }{
+            Error: "User did not claim reward for previous tournament",
+        })
+        return
+    }
+
+    latestTournamentID, err := ts.dynamoDBRepo.GetLatestTournamentForUser(requestData.Username)
+    if err != nil {
+        sendResponse(ts.channel, replyTo, correlationID, "UpdateScoreResponse", struct {
+            Error string `json:"error"`
+        }{
+            Error: "Failed to get latest tournament for user",
+        })
+        return
+    }
+
+    newTournamentID := latestTournamentID + ":" + strconv.Itoa(groupID)
+    log.Printf("latestTournamentID: %v", latestTournamentID)
+    log.Printf("newTournamentID: %v\n", newTournamentID)
+    action := "EnterLeaderboardGroup"
+    messageData := map[string]interface{}{
+        "action"  :  action,
+        "grpup_id": groupID,
+        "leaderboard_name": newTournamentID,
+        "username": requestData.Username,
+        "initial_score": 0,
+    }
+
+    publishToRabbitMQ(ts.channel, "leaderboardQueue", action, messageData, replyTo, correlationID)
+    log.Printf("Sent enterLeaderboardGroup action to LeaderboardService")
+
+    ts.dynamoDBRepo.UpdateUserField(requestData.Username, "latest_group_id", groupID)
 		
 	sendResponse(ts.channel, replyTo, correlationID, "EnterTournamentResponse", struct {
 		GroupID int `json:"group_id"`
@@ -270,6 +309,7 @@ func (ts *TournamentService) HandleUpdateScore(data []byte, replyTo string, corr
         return
     }
 
+
     if isTournamentActive {
         progressLevel, coins, score, err := ts.dynamoDBRepo.IncrementUserScoreInTournament(requestData.Username, latestTournamentID)
         if err != nil {
@@ -281,6 +321,43 @@ func (ts *TournamentService) HandleUpdateScore(data []byte, replyTo string, corr
             })
             return
         }
+
+        latestGroupID, err := ts.dynamoDBRepo.GetLatestGroupIdForUser(requestData.Username)
+
+        if latestGroupID == -2 {
+            log.Printf("Failed to get latest group id for user: %v", err)
+            sendResponse(ts.channel, replyTo, correlationID, "UpdateScoreResponse", struct {
+                Error string `json:"error"`
+            }{
+                Error: "User is not assigned to any group",
+            })
+            return
+        }
+
+
+        if err != nil {
+            sendResponse(ts.channel, replyTo, correlationID, "UpdateScoreResponse", struct {
+                Error string `json:"error"`
+            }{
+                Error: "Failed to get latest group id for user",
+            })
+            return
+        }
+
+        newLeaderboardName := latestTournamentID + ":" + strconv.Itoa(latestGroupID)
+
+        action := "IncrementGroupScore" // Define the action
+        messageData := map[string]interface{}{
+            "action":       action,
+            "group_id": latestGroupID,
+            "leaderboard_name": newLeaderboardName,
+            "username": requestData.Username,
+        }
+        // Publish the message to the "leaderboardQueue" with the publishToRabbitMQ function
+        log.Printf("messageData: %v", messageData)
+        publishToRabbitMQ(ts.channel, "leaderboardQueue", action, messageData, replyTo, correlationID)
+
+        log.Printf("Sent incrementGroupScore action to LeaderboardService")
         
         sendResponse(ts.channel, replyTo, correlationID, "UpdateScoreResponse", struct {
             Progress_Level int `json:"progress_level"`
@@ -291,7 +368,15 @@ func (ts *TournamentService) HandleUpdateScore(data []byte, replyTo string, corr
             Coins:         coins,
             Score:         score,
         })
+    } else {
+        sendResponse(ts.channel, replyTo, correlationID, "UpdateScoreResponse", struct {
+                Error string `json:"error"`
+        }{
+                Error: "User is not in any active tournament",
+         })
+        return 
     }
+
 }
 
 
@@ -306,6 +391,7 @@ func (ts *TournamentService) EndTournament(data []byte, replyTo string, correlat
         return
     }
 
+
     tournamentID, err := ts.dynamoDBRepo.EndLatestTournament()
     if err != nil {
         log.Printf("Failed to end latest tournament: %v", err)
@@ -316,6 +402,7 @@ func (ts *TournamentService) EndTournament(data []byte, replyTo string, correlat
         })
         return
     }
+
 
     rankedPlayers, err := ts.dynamoDBRepo.FindRankedPlayersForLatestTournament()
     if err != nil {
@@ -328,7 +415,8 @@ func (ts *TournamentService) EndTournament(data []byte, replyTo string, correlat
         return
     }
 
-	action := "deleteLeaderboard" // Define the action
+
+	action := "DeleteLeaderboard" // Define the action
     messageData := map[string]interface{}{
         "action":       action,
         "tournament_id": tournamentID, // Include the tournamentID here
@@ -336,7 +424,8 @@ func (ts *TournamentService) EndTournament(data []byte, replyTo string, correlat
     // Publish the message to the "leaderboardQueue" with the publishToRabbitMQ function
     publishToRabbitMQ(ts.channel, "leaderboardQueue", action, messageData, replyTo, correlationID)
 
-    log.Printf("Sent createLeaderboard action to LeaderboardService")
+    log.Printf("Sent deleteLeaderboard action to LeaderboardService")
+
 
     sendResponse(ts.channel, replyTo, correlationID, "EndTournamentResponse", struct {
         RankedPlayers []models.UserInTournament `json:"ranked_players"`
@@ -491,3 +580,4 @@ func (ts *TournamentService) HandleClaimReward(data []byte, replyTo string, corr
         RewardClaimed: rewardAmount,
     })
 }
+
