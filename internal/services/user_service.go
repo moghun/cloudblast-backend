@@ -106,6 +106,10 @@ func (uh *UserService) Start() {
 			uh.HandleCreateUser(msg.Body, msg.ReplyTo, msg.CorrelationId)
 		case "UpdateProgress":
 			uh.HandleUpdateProgress(msg.Body, msg.ReplyTo, msg.CorrelationId)
+        case "GetCountryLeaderboard":
+            uh.HandleGetCountryLeaderboard(msg.Body, msg.ReplyTo, msg.CorrelationId)
+        case "GetGlobalLeaderboard":
+            uh.HandleGetGlobalLeaderboard(msg.Body, msg.ReplyTo, msg.CorrelationId)
 		default:
 			log.Printf("Unknown action: %s", action)
 		}
@@ -136,6 +140,8 @@ func (uh *UserService) HandleSearchUser(data []byte, replyTo string, correlation
         log.Printf("Error fetching user: %v", err)
         return
     }
+
+    
 
     if user == nil {
 
@@ -352,4 +358,53 @@ func (uh *UserService) HandleUpdateProgress(data []byte, replyTo string, correla
         Progress_Level: user.Progress_Level + 1,
         Coins: user.Coins + 100,
     })
+}
+
+func (uh *UserService) HandleGetCountryLeaderboard(data []byte, replyTo string, correlationID string) {
+	var requestData struct {
+		Action   string `json:"action"`
+		Username string `json:"username"`
+	}
+
+	err := json.Unmarshal(data, &requestData)
+	if err != nil {
+		log.Printf("Failed to unmarshal data: %v", err)
+		return
+	}
+
+	users, err := uh.dynamoDBRepo.GetCountryLeaderboard(requestData.Username)
+	if err != nil {
+		log.Printf("Error fetching country leaderboard: %v", err)
+		return
+	}
+
+	sendResponse(uh.channel, replyTo, correlationID, "GetCountryLeaderboardResponse", struct {
+        Users []models.User `json:"users"`
+    }{
+        Users: users,
+    })
+}
+
+func (uh *UserService) HandleGetGlobalLeaderboard(data []byte, replyTo string, correlationID string) {
+	var requestData struct {
+		Action string `json:"action"`
+	}
+
+	err := json.Unmarshal(data, &requestData)
+	if err != nil {
+		log.Printf("Failed to unmarshal data: %v", err)
+		return
+	}
+
+	users, err := uh.dynamoDBRepo.GetGlobalLeaderboard()
+	if err != nil {
+		log.Printf("Error fetching global leaderboard: %v", err)
+		return
+	}
+
+	sendResponse(uh.channel, replyTo, correlationID, "GetGlobalLeaderboardResponse", struct {
+		Users []models.User `json:"users"`
+	}{
+		Users: users,
+	})
 }
