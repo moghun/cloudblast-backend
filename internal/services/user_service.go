@@ -150,9 +150,19 @@ func (uh *UserService) HandleSearchUser(data []byte, replyTo string, correlation
     }
 
     sendResponse(uh.channel, replyTo, correlationID, "SearchUserResponse",struct {
-        UserData   *models.User `json:"user_data"`
+        ID string `json:"uid"`
+        Username string `json:"username"`
+        Country string `json:"country"`
+        Progress_Level int `json:"progress_level"`
+        Coins int `json:"coins"`
+        Latest_Tournament_ID string `json:"latest_tournament_id"`
     }{
-        UserData:   user,
+        ID:   user.ID,
+        Username: user.Username,
+        Country: user.Country,
+        Progress_Level: user.Progress_Level,
+        Coins: user.Coins,
+        Latest_Tournament_ID: user.Latest_Tournament_ID,
     })
 }
 
@@ -163,6 +173,7 @@ func (uh *UserService) HandleCreateUser(data []byte, replyTo string, correlation
         Action   string `json:"action"`
         Username string `json:"username"`
         Password string `json:"password"`
+        Country string `json:"country"`
     }
 
     err := json.Unmarshal(data, &requestData)
@@ -202,6 +213,7 @@ func (uh *UserService) HandleCreateUser(data []byte, replyTo string, correlation
         ID:       uniqueID,
         Username: requestData.Username,
         Password: hashedPassword,
+        Country: requestData.Country,
         Progress_Level:    1,
         Coins:    100,
         Latest_Tournament_ID: "",

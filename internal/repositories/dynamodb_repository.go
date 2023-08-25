@@ -381,7 +381,6 @@ func (repo *DynamoDBRepository) RegisterToTournament(username string) (int, erro
         TableName: aws.String("UserInTournament"),
         Item:      av,
     }
-
     _, err = repo.client.PutItem(input)
     if err != nil {
         defer repo.mu.Unlock()
@@ -390,6 +389,7 @@ func (repo *DynamoDBRepository) RegisterToTournament(username string) (int, erro
 
     // Update the tournament's number of registered users atomically
     _ = repo.UpdateTournamentField(tournamentID, "num_registered_users", currentRegisteredUsers+1)
+    _ = repo.UpdateTournamentField(tournamentID, "latest_group_id", groupID)
     defer repo.mu.Unlock()
 
     // Update the user's Latest_Tournament_ID field using UpdateUserField

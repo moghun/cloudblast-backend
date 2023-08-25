@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"goodBlast-backend/internal/models"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -62,7 +61,7 @@ func HandleSearchUserRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Req
 			if msg.CorrelationId == correlationID {
 				var response struct {
                     Action string                 `json:"action"`
-                    Data   map[string]*models.User  `json:"data"`
+                    Data   map[string]interface{}  `json:"data"`
                 }
 
 				err := json.Unmarshal(msg.Body, &response)
@@ -71,24 +70,31 @@ func HandleSearchUserRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Req
 					return
 				}
                 data := response.Data
-				userData, userDataExists := data["user_data"]
-                responseData := struct {
-                    UserData *models.User  `json:"user_data"`
-                    }{
-                        UserData: userData,
-                }
-
-				if !userDataExists {
+				_, uidExists := data["uid"]
+                if !uidExists {
 					http.Error(w, "User data not found in response", http.StatusInternalServerError)
 					return
 				}
-
+                responseData := struct {
+                            ID string `json:"uid"`
+                            Username string `json:"username"`
+                            Country string `json:"country"`
+                            Progress_Level int `json:"progress_level"`
+                            Coins int `json:"coins"`
+                            Latest_Tournament_ID string `json:"latest_tournament_id"`
+                }{
+                                ID:   data["uid"].(string),
+                                Username: data["username"].(string),
+                                Country: data["country"].(string),
+                                Progress_Level: int(data["progress_level"].(float64)),
+                                Coins: int(data["coins"].(float64)),
+                                Latest_Tournament_ID: data["latest_tournament_id"].(string),
+                }
 				userJSON, err := json.Marshal(responseData)
 				if err != nil {
 					http.Error(w, "Failed to marshal user data", http.StatusInternalServerError)
 					return
 				}
-
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
 				w.Write(userJSON)

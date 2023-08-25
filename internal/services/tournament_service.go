@@ -134,6 +134,7 @@ func (ts *TournamentService) HandleStartTournament(data []byte, replyTo string, 
 		EndTime:      endTime,
 		NumRegisteredUsers: 0,
 		Finished: false,
+        LatestGroupID: 0,
 	}
 
 	// Create the tournament in the DynamoDB repository
