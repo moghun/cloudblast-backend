@@ -2,6 +2,8 @@ package repositories
 
 import (
 	"goodBlast-backend/internal/models"
+	"log"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -113,40 +115,30 @@ func (repo *DynamoDBRepository) GetAllUsers() ([]models.User, error) {
     return users, nil
 }
 
-//Search for a user by username
-//Returns all user data if found and nil if not found
 func (repo *DynamoDBRepository) GetUserByUsername(username string) (*models.User, error) {
-    keyCondition := expression.Key("username").Equal(expression.Value(username))
-
-    expr, err := expression.NewBuilder().WithKeyCondition(keyCondition).Build()
+    input := &dynamodb.GetItemInput{
+        TableName: aws.String("User"),
+        Key: map[string]*dynamodb.AttributeValue{
+            "username": {S: aws.String(username)},
+        },
+    }
+    result, err := repo.client.GetItem(input)
     if err != nil {
         return nil, err
     }
 
-    input := &dynamodb.QueryInput{
-        TableName:                 aws.String("User"),
-        KeyConditionExpression:    expr.KeyCondition(),
-        ExpressionAttributeNames:  expr.Names(),
-        ExpressionAttributeValues: expr.Values(),
-    }
-
-    result, err := repo.client.Query(input)
-    if err != nil {
-        return nil, err
-    }
-
-    if len(result.Items) == 0 {
+    if result.Item == nil {
         return nil, nil // User not found
     }
 
     var user models.User
-    err = dynamodbattribute.UnmarshalMap(result.Items[0], &user)
-    if err != nil {
+    if err := dynamodbattribute.UnmarshalMap(result.Item, &user); err != nil {
         return nil, err
     }
 
     return &user, nil
 }
+
 
 //TOURNAMENT
 
@@ -299,6 +291,7 @@ func (repo *DynamoDBRepository) GetAllTournaments() ([]models.Tournament, error)
 func (repo *DynamoDBRepository) GetLatestTournament() (string, error) {
     tournaments, err := repo.GetAllTournaments()
     if err != nil {
+        
         return "", err
     }
 
@@ -311,7 +304,6 @@ func (repo *DynamoDBRepository) GetLatestTournament() (string, error) {
             latestTournamentID = tournament.TournamentID
         }
     }
-
     return latestTournamentID, nil
 }
 
@@ -478,4 +470,140 @@ func (repo *DynamoDBRepository) IncrementUserScoreInTournament(username, tournam
     }
 
     return user.Progress_Level + 1, user.Coins + 100, score, nil
+}
+func (repo *DynamoDBRepository) GetUsersInTournament(tournamentID string) ([]models.UserInTournament, error) {
+    var users []models.UserInTournament
+
+    input := &dynamodb.QueryInput{
+        TableName: aws.String("UserInTournament"),
+        KeyConditionExpression: aws.String("tournament_id = :tournament_id"),
+        ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+            ":tournament_id": {S: aws.String(tournamentID)},
+        },
+    }
+
+    result, err := repo.client.Query(input)
+    if err != nil {
+        return nil, err
+    }
+
+    for _, item := range result.Items {
+        var user models.UserInTournament
+        err := dynamodbattribute.UnmarshalMap(item, &user)
+        if err != nil {
+            return nil, err
+        }
+        users = append(users, user)
+    }
+
+    return users, nil
+}
+
+func (repo *DynamoDBRepository) UpdateUserInTournamentRank(username, tournamentID string, rank int) error {
+    updateExpression := "SET #rk = :rank"
+
+    input := &dynamodb.UpdateItemInput{
+        TableName: aws.String("UserInTournament"),
+        Key: map[string]*dynamodb.AttributeValue{
+            "username":     {S: aws.String(username)},
+            "tournament_id": {S: aws.String(tournamentID)},
+        },
+        ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+            ":rank": {N: aws.String(strconv.Itoa(rank))},
+        },
+        ExpressionAttributeNames: map[string]*string{
+            "#rk": aws.String("rank"),
+        },
+        UpdateExpression: aws.String(updateExpression),
+    }
+
+    _, err := repo.client.UpdateItem(input)
+    return err
+}
+
+func (repo *DynamoDBRepository) FindRankedPlayersForLatestTournament() ([]models.UserInTournament, error) {
+    latestTournamentID, err := repo.GetLatestTournament()
+    if err != nil {
+        log.Printf("Failed to fetch latest tournament: %v", err)
+        return nil, err
+    }
+
+    // Fetch all UserInTournament records for the latest tournament
+    usersInTournament, err := repo.GetUsersInTournament(latestTournamentID)
+    if err != nil {
+        log.Printf("Failed to fetch users in tournament: %v", err)
+        return nil, err
+    }
+
+    // Sort usersInTournament based on score in descending order
+    sort.Slice(usersInTournament, func(i, j int) bool {
+        return usersInTournament[i].Score > usersInTournament[j].Score
+    })
+
+    // Assign ranks to the top four players
+    for i := 0; i < len(usersInTournament) && i < 4; i++ {
+        if i < 4{
+            usersInTournament[i].Rank = i + 1
+        } else {
+            usersInTournament[i].Rank = -1
+        }
+    }
+
+    // Update the UserInTournament records with ranks
+    for _, user := range usersInTournament {
+        err = repo.UpdateUserInTournamentRank(user.Username, user.TournamentID, user.Rank)
+        if err != nil {
+            log.Printf("Failed to update user in tournament rank: %v", err)
+            return nil, err
+        }
+    }
+
+    return usersInTournament[:4], nil
+}
+
+func (repo *DynamoDBRepository) EndLatestTournament() error {
+    latestTournamentID, err := repo.GetLatestTournament()
+    if err != nil {
+        log.Printf("Failed to fetch latest tournament: %v", err)
+        return err
+    }
+
+    err = repo.UpdateTournamentField(latestTournamentID, "finished", true)
+    if err != nil {
+        log.Printf("Failed to update tournament finished field: %v", err)
+        return err
+    }
+
+    return nil
+}
+
+func (repo *DynamoDBRepository) UpdateUserInTournamentClaimed(username, tournamentID string, claimed bool) error {
+    updateExpression := "SET #cl = :claimed"
+
+    input := &dynamodb.UpdateItemInput{
+        TableName: aws.String("UserInTournament"),
+        Key: map[string]*dynamodb.AttributeValue{
+            "username":     {S: aws.String(username)},
+            "tournament_id": {S: aws.String(tournamentID)},
+        },
+        ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+            ":claimed": {BOOL: aws.Bool(claimed)},
+        },
+        ExpressionAttributeNames: map[string]*string{
+            "#cl": aws.String("claimed"),
+        },
+        UpdateExpression: aws.String(updateExpression),
+    }
+
+    _, err := repo.client.UpdateItem(input)
+    return err
+}
+
+func (repo *DynamoDBRepository) IsTournamentFinished(tournamentID string) (bool, error) {
+    tournament, err := repo.GetTournamentByID(tournamentID)
+    if err != nil {
+        return false, err
+    }
+
+    return tournament.Finished, nil
 }
