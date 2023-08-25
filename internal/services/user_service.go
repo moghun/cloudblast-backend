@@ -156,6 +156,7 @@ func (uh *UserService) HandleSearchUser(data []byte, replyTo string, correlation
         Progress_Level int `json:"progress_level"`
         Coins int `json:"coins"`
         Latest_Tournament_ID string `json:"latest_tournament_id"`
+        Latest_Group_ID int `json:"latest_group_id"`
     }{
         ID:   user.ID,
         Username: user.Username,
@@ -163,6 +164,7 @@ func (uh *UserService) HandleSearchUser(data []byte, replyTo string, correlation
         Progress_Level: user.Progress_Level,
         Coins: user.Coins,
         Latest_Tournament_ID: user.Latest_Tournament_ID,
+        Latest_Group_ID: user.Latest_Group_ID,
     })
 }
 
@@ -217,6 +219,7 @@ func (uh *UserService) HandleCreateUser(data []byte, replyTo string, correlation
         Progress_Level:    1,
         Coins:    100,
         Latest_Tournament_ID: "",
+        Latest_Group_ID: -1,
     }
 
     // Create user in the database
