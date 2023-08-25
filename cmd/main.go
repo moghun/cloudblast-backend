@@ -42,6 +42,8 @@ func main() {
 	router.HandleFunc("/api/StartTournament", handlers.HandleStartTournamentRoute(ch)).Methods("POST")
 	router.HandleFunc("/api/EnterTournament", handlers.HandleEnterTournamentRoute(ch)).Methods("POST")
 	router.HandleFunc("/api/UpdateScore", handlers.HandleUpdateScoreRoute(ch)).Methods("POST")
+	router.HandleFunc("/api/EndTournament", handlers.HandleEndTournamentRoute(ch)).Methods("POST")
+	router.HandleFunc("/api/ClaimReward", handlers.HandleClaimRewardRoute(ch)).Methods("POST")
 
 
 	//Start user service
