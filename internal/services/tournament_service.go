@@ -90,6 +90,10 @@ func (ts *TournamentService) Start() {
 			ts.HandleEnterTournament(msg.Body, msg.ReplyTo, msg.CorrelationId)
 		case "UpdateScore":
 			ts.HandleUpdateScore(msg.Body, msg.ReplyTo, msg.CorrelationId)
+		case "ClaimReward":
+			ts.HandleClaimReward(msg.Body, msg.ReplyTo, msg.CorrelationId)
+		case "EndTournament":
+			ts.EndTournament(msg.Body, msg.ReplyTo, msg.CorrelationId)
 		default:
 			log.Printf("Unknown action: %s", action)
 		}
@@ -277,4 +281,184 @@ func (ts *TournamentService) HandleUpdateScore(data []byte, replyTo string, corr
             Score:         score,
         })
     }
+}
+
+
+func (ts *TournamentService) EndTournament(data []byte, replyTo string, correlationID string) {
+    var requestData struct {
+        Action string `json:"action"`
+    }
+
+    err := json.Unmarshal(data, &requestData)
+    if err != nil {
+        log.Printf("Failed to unmarshal data: %v", err)
+        return
+    }
+
+    err = ts.dynamoDBRepo.EndLatestTournament()
+    if err != nil {
+        log.Printf("Failed to end latest tournament: %v", err)
+        sendResponse(ts.channel, replyTo, correlationID, "EndTournamentResponse", struct {
+            Error string `json:"error"`
+        }{
+            Error: "Failed to end latest tournament",
+        })
+        return
+    }
+
+    rankedPlayers, err := ts.dynamoDBRepo.FindRankedPlayersForLatestTournament()
+    if err != nil {
+        log.Printf("Failed to find ranked players: %v", err)
+        sendResponse(ts.channel, replyTo, correlationID, "EndTournamentResponse", struct {
+            Error string `json:"error"`
+        }{
+            Error: "Failed to find ranked players",
+        })
+        return
+    }
+
+    sendResponse(ts.channel, replyTo, correlationID, "EndTournamentResponse", struct {
+        RankedPlayers []models.UserInTournament `json:"ranked_players"`
+    }{
+        RankedPlayers: rankedPlayers,
+    })
+}
+
+func (ts *TournamentService) HandleClaimReward(data []byte, replyTo string, correlationID string) {
+	var requestData struct {
+        Action   string `json:"action"`
+        Username string `json:"username"`
+    }
+
+    err := json.Unmarshal(data, &requestData)
+    if err != nil {
+        log.Printf("Failed to unmarshal data: %v", err)
+        return
+    }
+
+    // Get the username from the request data
+    username := requestData.Username
+    // Get the latest tournament ID for the user
+    latestTournamentID, err := ts.dynamoDBRepo.GetLatestTournamentForUser(username)
+    if err != nil {
+        sendResponse(ts.channel, replyTo, correlationID, "ClaimRewardResponse", struct {
+            Error string `json:"error"`
+        }{
+            Error: "Failed to get latest tournament for user",
+        })
+        return
+    }
+
+    if latestTournamentID == "" {
+        // User has not joined any tournament yet
+        sendResponse(ts.channel, replyTo, correlationID, "ClaimRewardResponse", struct {
+            Error string `json:"error"`
+        }{
+            Error: "User has not joined any tournament yet",
+        })
+        return
+    }
+
+    // Check if the tournament is finished
+    isTournamentFinished, err := ts.dynamoDBRepo.IsTournamentFinished(latestTournamentID)
+    if err != nil {
+        sendResponse(ts.channel, replyTo, correlationID, "ClaimRewardResponse", struct {
+            Error string `json:"error"`
+        }{
+            Error: "Failed to check if tournament is finished",
+        })
+        return
+    }
+
+    if !isTournamentFinished {
+        sendResponse(ts.channel, replyTo, correlationID, "ClaimRewardResponse", struct {
+            Error string `json:"error"`
+        }{
+            Error: "Reward cannot be claimed yet. Tournament is not finished",
+        })
+        return
+    }
+
+    // Get the user's entry in the tournament
+    userInTournament, err := ts.dynamoDBRepo.GetUserInTournamentByUsernameAndTournamentID(username, latestTournamentID)
+    if err != nil {
+        sendResponse(ts.channel, replyTo, correlationID, "ClaimRewardResponse", struct {
+            Error string `json:"error"`
+        }{
+            Error: "Failed to get user's entry in the tournament",
+        })
+        return
+    }
+
+    if userInTournament == nil {
+        sendResponse(ts.channel, replyTo, correlationID, "ClaimRewardResponse", struct {
+            Error string `json:"error"`
+        }{
+            Error: "User's entry not found in the tournament",
+        })
+        return
+    }
+
+    if userInTournament.Claimed {
+        sendResponse(ts.channel, replyTo, correlationID, "ClaimRewardResponse", struct {
+            Error string `json:"error"`
+        }{
+            Error: "Reward is already claimed",
+        })
+        return
+    }
+
+    var rewardAmount int
+    switch userInTournament.Rank {
+    case 1:
+        rewardAmount = 5000
+    case 2:
+        rewardAmount = 3000
+    case 3:
+        rewardAmount = 2000
+    case 4:
+        rewardAmount = 1000
+    default:
+        rewardAmount = 0
+    }
+
+	// Get the user's current coin balance
+	user, err := ts.dynamoDBRepo.GetUserByUsername(username)
+	if err != nil {
+		sendResponse(ts.channel, replyTo, correlationID, "ClaimRewardResponse", struct {
+			Error string `json:"error"`
+		}{
+			Error: "Failed to get user's data",
+		})
+		return
+	}
+
+	// Update user's coin balance and mark the reward as claimed
+	err = ts.dynamoDBRepo.UpdateUserField(username, "coins", user.Coins+rewardAmount)
+	if err != nil {
+		sendResponse(ts.channel, replyTo, correlationID, "ClaimRewardResponse", struct {
+			Error string `json:"error"`
+		}{
+			Error: "Failed to update user's coin balance",
+		})
+		return
+	}
+
+    err = ts.dynamoDBRepo.UpdateUserInTournamentClaimed(username, latestTournamentID, true)
+    if err != nil {
+        sendResponse(ts.channel, replyTo, correlationID, "ClaimRewardResponse", struct {
+            Error string `json:"error"`
+        }{
+            Error: "Failed to mark reward as claimed",
+        })
+        return
+    }
+
+    sendResponse(ts.channel, replyTo, correlationID, "ClaimRewardResponse", struct {
+        Success       bool `json:"success"`
+        RewardClaimed int  `json:"reward_claimed"`
+    }{
+        Success:       true,
+        RewardClaimed: rewardAmount,
+    })
 }
