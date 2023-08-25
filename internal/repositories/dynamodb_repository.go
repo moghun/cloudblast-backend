@@ -694,3 +694,112 @@ func (repo *DynamoDBRepository) DidUserClaimReward(username string) (bool, error
     rewardClaimed := *rewardClaimedAttr.N
     return rewardClaimed == "1", nil
 }
+
+func (repo *DynamoDBRepository) GetCountryLeaderboard(username string) ([]models.User, error) {
+    // Get the country of the given username
+    country, err := repo.GetCountryForUser(username)
+    if err != nil {
+        return nil, err
+    }
+
+    // Scan users from the same country
+    input := &dynamodb.ScanInput{
+        TableName: aws.String("User"),
+        FilterExpression: aws.String("country = :country"),
+        ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+            ":country": {
+                S: aws.String(country),
+            },
+        },
+    }
+
+    result, err := repo.client.Scan(input)
+    if err != nil {
+        return nil, err
+    }
+
+    // Filter and sort users
+    var users []models.User
+    for _, item := range result.Items {
+        user := models.User{} // Assuming you have a User struct
+        err := dynamodbattribute.UnmarshalMap(item, &user)
+        if err != nil {
+            return nil, err
+        }
+        users = append(users, user)
+    }
+
+    // Sort users by progress level in descending order
+    sort.SliceStable(users, func(i, j int) bool {
+        return users[i].Progress_Level > users[j].Progress_Level
+    })
+
+    // Limit to the first 1000 users (or less if fewer users exist)
+    maxUsers := 1000
+    if len(users) < maxUsers {
+        maxUsers = len(users)
+    }
+    return users[:maxUsers], nil
+}
+func (repo *DynamoDBRepository) GetCountryForUser(username string) (string, error) {
+    input := &dynamodb.GetItemInput{
+        TableName: aws.String("User"),
+        Key: map[string]*dynamodb.AttributeValue{
+            "username": {
+                S: aws.String(username),
+            },
+        },
+        ProjectionExpression: aws.String("country"),
+    }
+
+    result, err := repo.client.GetItem(input)
+    if err != nil {
+        return "", err
+    }
+
+    if result.Item == nil {
+        return "", err
+    }
+
+    countryAttr := result.Item["country"]
+    if countryAttr == nil || countryAttr.S == nil {
+        return "", err
+    }
+
+    return *countryAttr.S, nil
+}
+
+func (repo *DynamoDBRepository) GetGlobalLeaderboard() ([]models.User, error) {
+    // Scan all users
+    input := &dynamodb.ScanInput{
+        TableName: aws.String("User"),
+    }
+
+    result, err := repo.client.Scan(input)
+    if err != nil {
+        return nil, err
+    }
+
+    // Filter and sort users
+    var users []models.User
+    for _, item := range result.Items {
+        user := models.User{} // Assuming you have a User struct
+        err := dynamodbattribute.UnmarshalMap(item, &user)
+        if err != nil {
+            return nil, err
+        }
+        users = append(users, user)
+    }
+
+    // Sort users by progress level in descending order
+    sort.SliceStable(users, func(i, j int) bool {
+        return users[i].Progress_Level > users[j].Progress_Level
+    })
+
+    // Limit to the first 1000 users (or less if fewer users exist)
+    maxUsers := 1000
+    if len(users) < maxUsers {
+        maxUsers = len(users)
+    }
+    return users[:maxUsers], nil
+}
