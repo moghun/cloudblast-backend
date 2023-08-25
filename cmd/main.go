@@ -36,18 +36,28 @@ func main() {
 	//Declare RabbitMQ queue
 	router := mux.NewRouter()
 	router.HandleFunc("/api/CreateUser", handlers.HandleCreateUserRoute(ch)).Methods("POST")
-	router.HandleFunc("/api/Login", handlers.HandleLoginRoute(ch)).Methods("POST")
-	router.HandleFunc("/api/SearchUser", handlers.HandleSearchUserRoute(ch)).Methods("POST")
+	router.HandleFunc("/api/Login", handlers.HandleLoginRoute(ch)).Methods("GET")
+	router.HandleFunc("/api/SearchUser", handlers.HandleSearchUserRoute(ch)).Methods("GET")
 	router.HandleFunc("/api/UpdateProgress", handlers.HandleUpdateProgressRoute(ch)).Methods("POST")
-
+	router.HandleFunc("/api/StartTournament", handlers.HandleStartTournamentRoute(ch)).Methods("POST")
+	router.HandleFunc("/api/EnterTournament", handlers.HandleEnterTournamentRoute(ch)).Methods("POST")
+	router.HandleFunc("/api/UpdateScore", handlers.HandleUpdateScoreRoute(ch)).Methods("POST")
 
 
 	//Start user service
 	userService, err := services.NewUserService(conn)
+
 	if err != nil {
 		log.Fatalf("Failed to initialize user_handler: %v", err)
 	}
 	go userService.Start()
+
+	// Start tournament service
+	tournamentService, err := services.NewTournamentService(conn)
+	if err != nil {
+		log.Fatalf("Failed to initialize tournament_service: %v", err)
+	}
+	go tournamentService.Start()
 
 	//Handle graceful shutdown
 	stopChan := make(chan os.Signal, 1)
@@ -61,5 +71,6 @@ func main() {
 	<-stopChan
 	fmt.Println("Main service is stopping...")
 	userService.Stop()
+	tournamentService.Stop()
 	fmt.Println("Main service stopped.")
 }
