@@ -36,16 +36,15 @@ func main() {
 
 	//Declare RabbitMQ queue
 	router := mux.NewRouter()
-	router.HandleFunc("/api/CreateUser", handlers.HandleCreateUserRoute(ch)).Methods("POST")
-	router.HandleFunc("/api/Login", handlers.HandleLoginRoute(ch)).Methods("GET")
-	router.HandleFunc("/api/SearchUser", handlers.HandleSearchUserRoute(ch)).Methods("GET")
-	router.HandleFunc("/api/UpdateProgress", auth.AuthMiddleware(handlers.HandleUpdateProgressRoute(ch))).Methods("POST")
-	router.HandleFunc("/api/StartTournament", handlers.HandleStartTournamentRoute(ch)).Methods("POST")
-	router.HandleFunc("/api/EnterTournament", auth.AuthMiddleware(handlers.HandleEndTournamentRoute(ch))).Methods("POST")
-	router.HandleFunc("/api/UpdateScore", auth.AuthMiddleware(handlers.HandleSearchUserRoute(ch))).Methods("POST")
-	router.HandleFunc("/api/EndTournament", handlers.HandleEndTournamentRoute(ch)).Methods("POST")
-	router.HandleFunc("/api/ClaimReward", auth.AuthMiddleware(handlers.HandleClaimRewardRoute(ch))).Methods("POST")
-
+	router.HandleFunc("/api/tournament/StartTournament", handlers.HandleStartTournamentRoute(ch)).Methods("POST")
+	router.HandleFunc("/api/tournament/EndTournament", handlers.HandleEndTournamentRoute(ch)).Methods("POST")
+	router.HandleFunc("/api/user/CreateUser", handlers.HandleCreateUserRoute(ch)).Methods("POST")
+	router.HandleFunc("/api/user/Login", handlers.HandleLoginRoute(ch)).Methods("GET")
+	router.HandleFunc("/api/user/SearchUser", handlers.HandleSearchUserRoute(ch)).Methods("GET")
+	router.HandleFunc("/api/user/UpdateProgress", auth.AuthMiddleware(handlers.HandleUpdateProgressRoute(ch))).Methods("POST")
+	router.HandleFunc("/api/tournament/EnterTournament", auth.AuthMiddleware(handlers.HandleEnterTournamentRoute(ch))).Methods("POST")
+	router.HandleFunc("/api/tournament/UpdateScore", auth.AuthMiddleware(handlers.HandleUpdateScoreRoute(ch))).Methods("POST")
+	router.HandleFunc("/api/tournament/ClaimReward", auth.AuthMiddleware(handlers.HandleClaimRewardRoute(ch))).Methods("POST")
 
 	//Start user service
 	userService, err := services.NewUserService(conn)
@@ -62,6 +61,12 @@ func main() {
 	}
 	go tournamentService.Start()
 
+	leaderboardService, err := services.NewLeaderboardService(conn, "localhost:6379")
+	if err != nil {
+		log.Fatalf("Failed to initialize tournament_service: %v", err)
+	}
+	go leaderboardService.Start()
+
 	//Handle graceful shutdown
 	stopChan := make(chan os.Signal, 1)
 	signal.Notify(stopChan, syscall.SIGINT, syscall.SIGTERM)
@@ -75,5 +80,6 @@ func main() {
 	fmt.Println("Main service is stopping...")
 	userService.Stop()
 	tournamentService.Stop()
+	leaderboardService.Stop()
 	fmt.Println("Main service stopped.")
 }

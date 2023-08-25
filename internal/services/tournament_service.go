@@ -144,6 +144,16 @@ func (ts *TournamentService) HandleStartTournament(data []byte, replyTo string, 
 		return
 	}
 
+	action := "createLeaderboard" // Define the action
+    messageData := map[string]interface{}{
+        "action":       action,
+        "tournament_id": tournamentID, // Include the tournamentID here
+    }
+    // Publish the message to the "leaderboardQueue" with the publishToRabbitMQ function
+    publishToRabbitMQ(ts.channel, "leaderboardQueue", action, messageData, replyTo, correlationID)
+
+    log.Printf("Sent createLeaderboard action to LeaderboardService")
+
 	sendResponse(ts.channel, replyTo, correlationID, "StartTournamentResponse", struct {
 		TournamentID string `json:"tournament_id"`
 		StartTime    string `json:"start_time"`
@@ -295,7 +305,7 @@ func (ts *TournamentService) EndTournament(data []byte, replyTo string, correlat
         return
     }
 
-    err = ts.dynamoDBRepo.EndLatestTournament()
+    tournamentID, err := ts.dynamoDBRepo.EndLatestTournament()
     if err != nil {
         log.Printf("Failed to end latest tournament: %v", err)
         sendResponse(ts.channel, replyTo, correlationID, "EndTournamentResponse", struct {
@@ -316,6 +326,16 @@ func (ts *TournamentService) EndTournament(data []byte, replyTo string, correlat
         })
         return
     }
+
+	action := "deleteLeaderboard" // Define the action
+    messageData := map[string]interface{}{
+        "action":       action,
+        "tournament_id": tournamentID, // Include the tournamentID here
+    }
+    // Publish the message to the "leaderboardQueue" with the publishToRabbitMQ function
+    publishToRabbitMQ(ts.channel, "leaderboardQueue", action, messageData, replyTo, correlationID)
+
+    log.Printf("Sent createLeaderboard action to LeaderboardService")
 
     sendResponse(ts.channel, replyTo, correlationID, "EndTournamentResponse", struct {
         RankedPlayers []models.UserInTournament `json:"ranked_players"`

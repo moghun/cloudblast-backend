@@ -547,9 +547,11 @@ func (repo *DynamoDBRepository) FindRankedPlayersForLatestTournament() ([]models
     }
 
     // Sort usersInTournament based on score in descending order
-    sort.Slice(usersInTournament, func(i, j int) bool {
-        return usersInTournament[i].Score > usersInTournament[j].Score
-    })
+    if len(usersInTournament) >= 1 {
+        sort.Slice(usersInTournament, func(i, j int) bool {
+            return usersInTournament[i].Score > usersInTournament[j].Score
+        })
+    }
 
     // Assign ranks to the top four players
     for i := 0; i < len(usersInTournament) && i < 4; i++ {
@@ -569,23 +571,31 @@ func (repo *DynamoDBRepository) FindRankedPlayersForLatestTournament() ([]models
         }
     }
 
+    userCount := len(usersInTournament)
+    if(userCount == 0){
+        return []models.UserInTournament{}, nil
+    }
+    if(userCount < 4){
+        return usersInTournament[:userCount], nil
+    }
+
     return usersInTournament[:4], nil
 }
 
-func (repo *DynamoDBRepository) EndLatestTournament() error {
+func (repo *DynamoDBRepository) EndLatestTournament() (string, error) {
     latestTournamentID, err := repo.GetLatestTournament()
     if err != nil {
         log.Printf("Failed to fetch latest tournament: %v", err)
-        return err
+        return "", err
     }
 
     err = repo.UpdateTournamentField(latestTournamentID, "finished", true)
     if err != nil {
         log.Printf("Failed to update tournament finished field: %v", err)
-        return err
+        return "", err
     }
 
-    return nil
+    return latestTournamentID, nil
 }
 
 func (repo *DynamoDBRepository) UpdateUserInTournamentClaimed(username, tournamentID string, claimed bool) error {

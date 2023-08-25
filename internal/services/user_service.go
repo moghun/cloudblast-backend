@@ -113,7 +113,7 @@ func (uh *UserService) Start() {
 }
 
 func (uh *UserService) Stop() {
-	log.Println("Stopping user_Service service...")
+	log.Println("Stopping user service service...")
 	if err := uh.channel.Close(); err != nil {
 		log.Printf("Error closing channel: %v", err)
 	}
