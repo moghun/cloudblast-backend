@@ -119,10 +119,6 @@ func (uh *UserService) Stop() {
 	}
 }
 
-func (uh *UserService) HandleUpdateUser(b []byte) {
-	panic("unimplemented")
-}
-
 func (uh *UserService) HandleSearchUser(data []byte, replyTo string, correlationID string) {
 	var requestData struct {
 		Action   string `json:"action"`
@@ -222,7 +218,7 @@ func (uh *UserService) HandleCreateUser(data []byte, replyTo string, correlation
         Password: hashedPassword,
         Progress_Level:    1,
         Coins:    100,
-        Latest_Tournament_ID: -1,
+        Latest_Tournament_ID: "",
     }
 
     // Create user in the database
@@ -295,41 +291,6 @@ func (uh *UserService) HandleLogin(data []byte, replyTo string, correlationID st
         Token:  token,
         Success: true,
     })
-}
-// sendResponse sends a response back to the caller
-func sendResponse(ch *amqp.Channel, replyTo string, correlationID string, action string, data interface{}) {
-    responseData := struct {
-        Action string      `json:"action"`
-        Data   interface{} `json:"data"`
-    }{
-        Action: action,
-        Data:   data,
-    }
-
-    responseDataJSON, err := json.Marshal(responseData)
-    if err != nil {
-        log.Fatalf("Failed to encode response data to JSON: %v", err)
-        return
-    }
-
-    // Publish response to the replyTo queue
-    err = ch.Publish(
-        "",
-        replyTo,
-        false,
-        false,
-        amqp.Publishing{
-            ContentType:   "application/json",
-            CorrelationId: correlationID,
-            Body:          responseDataJSON,
-            Headers: amqp.Table{
-                "action": action,
-            },
-        },
-    )
-    if err != nil {
-        log.Fatalf("Failed to publish a response message: %v", err)
-    }
 }
 
 func (uh *UserService) HandleUpdateProgress(data []byte, replyTo string, correlationID string) {
