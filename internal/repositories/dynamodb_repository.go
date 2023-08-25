@@ -393,7 +393,7 @@ func (repo *DynamoDBRepository) RegisterToTournament(username string) (int, erro
     defer repo.mu.Unlock()
 
     // Update the user's Latest_Tournament_ID field using UpdateUserField
-    err = repo.UpdateUserField(username, "Latest_Tournament_ID", tournamentID)
+    err = repo.UpdateUserField(username, "latest_tournament_id", tournamentID)
     if err != nil {
         return -1, err
     }
@@ -627,4 +627,70 @@ func (repo *DynamoDBRepository) IsTournamentFinished(tournamentID string) (bool,
     }
 
     return tournament.Finished, nil
+}
+
+
+func (repo *DynamoDBRepository) GetLatestGroupIdForUser(username string) (int, error) {
+    user, err := repo.GetUserByUsername(username)
+    if user == nil {
+        return -1, nil
+    }
+    if err != nil {
+        return -1, err
+    }
+
+    latest_Group_ID := user.Latest_Group_ID
+    
+
+    if latest_Group_ID == -1 {
+        return -2, err
+    }
+
+    return latest_Group_ID, nil
+}
+
+func (repo *DynamoDBRepository) DidUserClaimReward(username string) (bool, error) {
+    // Get the user's latest_tournament_id
+    latestTournamentID, err := repo.GetLatestTournamentForUser(username)
+    if latestTournamentID != "" {
+        return false, nil
+    }
+    if err != nil {
+        return false, err
+    }
+
+    if latestTournamentID == "" {
+        return false, nil
+    }
+
+    // Check if the user claimed the reward for the latest tournament
+    input := &dynamodb.GetItemInput{
+        TableName: aws.String("UserInTournament"),
+        Key: map[string]*dynamodb.AttributeValue{
+            "tournament_id": {
+                S: aws.String(latestTournamentID),
+            },
+            "username": {
+                S: aws.String(username),
+            },
+        },
+        ProjectionExpression: aws.String("claimed"),
+    }
+
+    result, err := repo.client.GetItem(input)
+    if err != nil {
+        return false, err
+    }
+
+    if result == nil || result.Item == nil {
+        return false, nil
+    }
+
+    rewardClaimedAttr := result.Item["claimed"]
+    if rewardClaimedAttr == nil || rewardClaimedAttr.N == nil {
+        return false, nil
+    }
+
+    rewardClaimed := *rewardClaimedAttr.N
+    return rewardClaimed == "1", nil
 }

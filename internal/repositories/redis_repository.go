@@ -34,16 +34,24 @@ func (rr *RedisRepo) Close() error {
 	return rr.client.Close()
 }
 
-func (rr *RedisRepo) CreateLeaderboard(leaderboardName string) error {
-	_, err := rr.client.ZAdd(rr.ctx, leaderboardName, &redis.Z{}).Result()
-	return err
-}
+func (rr *RedisRepo) DeleteLeaderboards(leaderboardName string) error {
+	// Find and delete keys matching the pattern tournament_id:group_id
+	pattern := leaderboardName + ":*"
+	iter := rr.client.Scan(rr.ctx, 0, pattern, 0).Iterator()
+	for iter.Next(rr.ctx) {
+		key := iter.Val()
+		_, err := rr.client.Del(rr.ctx, key).Result()
+		if err != nil {
+			return err
+		}
+	}
 
-func (rr *RedisRepo) DeleteLeaderboard(leaderboardName string) error {
-	_, err := rr.client.Del(rr.ctx, leaderboardName).Result()
-	return err
-}
+	if err := iter.Err(); err != nil {
+		return err
+	}
 
+	return nil
+}
 // Add a user's score to the leaderboard
 func (rr *RedisRepo) AddScoreToLeaderboard(leaderboardKey string, username string, score int) error {
 	return rr.client.ZAdd(rr.ctx, leaderboardKey, &redis.Z{
@@ -80,26 +88,48 @@ func (rr *RedisRepo) GetLeaderboardWithRanks(leaderboardKey string, start, stop 
 	return leaderboard, nil
 }
 
-func main() {
-	repo, err := NewRedisRepo("localhost:6379")
-	if err != nil {
-		log.Fatalf("Error creating RedisRepo: %v", err)
-	}
+func (rr *RedisRepo) EnterLeaderboardGroup(leaderboardName, username string, initialScore int) error {
+	leaderboardKey := leaderboardName
+	log.Printf("Entering user %s into leaderboard %s with initial score %d", username, leaderboardKey, initialScore)
 
-	// Create or use existing leaderboard
-	leaderboardName := "global_leaderboard"
-	err = repo.CreateLeaderboard(leaderboardName)
-	if err != nil {
-		log.Fatalf("Error creating leaderboard: %v", err)
-	}
-
-	// Add scores to the leaderboard
-	username := "user123"
-	score := 1000
-	err = repo.AddScoreToLeaderboard(leaderboardName, username, score)
-	if err != nil {
-		log.Printf("Error adding score to leaderboard: %v", err)
-	} else {
-		log.Printf("Score added to leaderboard: %s - %s - %d", leaderboardName, username, score)
-	}
+	// Use ZAdd to add the user with an initial score to the leaderboard
+	return rr.client.ZAdd(rr.ctx, leaderboardKey, &redis.Z{
+		Score:  float64(initialScore),
+		Member: username,
+	}).Err()
 }
+
+func (rr *RedisRepo) IncrementGroupScore(leaderboardName string, username string) error {
+	leaderboardKey := leaderboardName
+	return rr.client.ZIncrBy(rr.ctx, leaderboardKey, 1, username).Err()
+}
+
+func (rr *RedisRepo) GetGroupUserRank(leaderboardName string, username string) (int64, error) {
+	leaderboardKey := leaderboardName
+	rank, err := rr.client.ZRevRank(rr.ctx, leaderboardKey, username).Result()
+	log.Printf("Rank: %d", rank)
+	if err != nil {
+		return -1, err
+	}
+	return rank + 1, nil
+}
+
+func (rr *RedisRepo) GetGroupLeaderboardWithRanks(leaderboardName string, start, stop int64) ([]map[string]interface{}, error) {
+	leaderboardKey := leaderboardName
+	zRange, err := rr.client.ZRevRangeWithScores(rr.ctx, leaderboardKey, start, stop).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	leaderboard := make([]map[string]interface{}, len(zRange))
+	for i, z := range zRange {
+		leaderboard[i] = map[string]interface{}{
+			"rank":   i + 1,
+			"member": z.Member,
+			"score":  int(z.Score),
+		}
+	}
+
+	return leaderboard, nil
+}
+
