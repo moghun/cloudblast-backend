@@ -2,38 +2,11 @@ package handlers
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/streadway/amqp"
 )
-
-func publishToRabbitMQ(ch *amqp.Channel, action string, data interface{}, replyTo string, correlationID string) {
-	dataJSON, err := json.Marshal(data)
-	if err != nil {
-		log.Fatalf("Failed to encode data to JSON: %v", err)
-	}
-
-	err = ch.Publish(
-		"",
-		"userQueue",
-		false,
-		false,
-		amqp.Publishing{
-			ContentType:   "application/json",
-			ReplyTo:       replyTo,
-			CorrelationId: correlationID,
-			Body:          dataJSON,
-			Headers: amqp.Table{
-				"action": action,
-			},
-		},
-	)
-	if err != nil {
-		log.Fatalf("Failed to publish a message: %v", err)
-	}
-}
 
 func HandleSearchUserRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -82,7 +55,7 @@ func HandleSearchUserRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Req
 			return
 		}
 
-		publishToRabbitMQ(ch, "SearchUser", requestData, replyQueue.Name, correlationID)
+		publishToRabbitMQ(ch, "userQueue", "SearchUser", requestData, replyQueue.Name, correlationID)
 
 		for msg := range msgs {
 			if msg.CorrelationId == correlationID {
@@ -164,7 +137,7 @@ func HandleCreateUserRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Req
             return
         }
 
-        publishToRabbitMQ(ch, "CreateUser", requestData, replyQueue.Name, correlationID)
+        publishToRabbitMQ(ch, "userQueue", "CreateUser", requestData, replyQueue.Name, correlationID)
 
         for msg := range msgs {
 			if msg.CorrelationId == correlationID {
@@ -181,9 +154,9 @@ func HandleCreateUserRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Req
 
 				data := response.Data
 
-				_, errorExists := data["error"]; 
+				errorVal, errorExists := data["error"]; 
 				if errorExists == true {
-					http.Error(w, "Failed to create user", http.StatusInternalServerError)
+					http.Error(w, errorVal.(string), http.StatusInternalServerError)
 					return
 				}
 
@@ -260,7 +233,7 @@ func HandleLoginRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Request)
             return
         }
 
-        publishToRabbitMQ(ch, "Login", requestData, replyQueue.Name, correlationID)
+        publishToRabbitMQ(ch, "userQueue", "Login", requestData, replyQueue.Name, correlationID)
 
         for msg := range msgs {
 			if msg.CorrelationId == correlationID {
@@ -365,7 +338,7 @@ func HandleUpdateProgressRoute(ch *amqp.Channel) func(http.ResponseWriter, *http
             return
         }
 
-        publishToRabbitMQ(ch, "UpdateProgress", requestData, replyQueue.Name, correlationID)
+        publishToRabbitMQ(ch, "userQueue", "UpdateProgress", requestData, replyQueue.Name, correlationID)
 
         for msg := range msgs {
             if msg.CorrelationId == correlationID {
