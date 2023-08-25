@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"goodBlast-backend/internal/models"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -59,20 +60,30 @@ func HandleSearchUserRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Req
 
 		for msg := range msgs {
 			if msg.CorrelationId == correlationID {
-				var response map[string]interface{}
+				var response struct {
+                    Action string                 `json:"action"`
+                    Data   map[string]*models.User  `json:"data"`
+                }
+
 				err := json.Unmarshal(msg.Body, &response)
 				if err != nil {
 					http.Error(w, "Failed to unmarshal response data", http.StatusInternalServerError)
 					return
 				}
+                data := response.Data
+				userData, userDataExists := data["user_data"]
+                responseData := struct {
+                    UserData *models.User  `json:"user_data"`
+                    }{
+                        UserData: userData,
+                }
 
-				userData, userExists := response["user"]
-				if !userExists {
+				if !userDataExists {
 					http.Error(w, "User data not found in response", http.StatusInternalServerError)
 					return
 				}
 
-				userJSON, err := json.Marshal(userData)
+				userJSON, err := json.Marshal(responseData)
 				if err != nil {
 					http.Error(w, "Failed to marshal user data", http.StatusInternalServerError)
 					return
@@ -291,7 +302,7 @@ func HandleLoginRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Request)
     }
 }
 
-func HandleUpdateProgressRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Request) {
+func HandleUpdateProgressRoute(ch *amqp.Channel) func (http.ResponseWriter, *http.Request) {
     return func(w http.ResponseWriter, r *http.Request) {
         var requestData struct {
             Action   string `json:"action"`

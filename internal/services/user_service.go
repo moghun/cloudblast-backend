@@ -120,61 +120,42 @@ func (uh *UserService) Stop() {
 }
 
 func (uh *UserService) HandleSearchUser(data []byte, replyTo string, correlationID string) {
-	var requestData struct {
-		Action   string `json:"action"`
-		Username string `json:"username"`
-	}
+    var requestData struct {
+        Action   string `json:"action"`
+        Username string `json:"username"`
+    }
 
-	err := json.Unmarshal(data, &requestData)
-	if err != nil {
-		log.Printf("Failed to unmarshal data: %v", err)
-		return
-	}
+    err := json.Unmarshal(data, &requestData)
+    if err != nil {
+        log.Printf("Failed to unmarshal data: %v", err)
+        return
+    }
 
-	user, err := uh.dynamoDBRepo.GetUserByUsername(requestData.Username)
+    user, err := uh.dynamoDBRepo.GetUserByUsername(requestData.Username)
     if err != nil {
         log.Printf("Error fetching user: %v", err)
         return
     }
-	if err != nil {
-		log.Printf("Error fetching user: %v", err)
-		return
-	}
 
-	responseData := struct {
-		Action string      `json:"action"`
-		User   interface{} `json:"user"`
-	}{
-		Action: "SearchUserResponse",
-		User:   user,
-	}
+    if user == nil {
 
-	responseDataJSON, err := json.Marshal(responseData)
-	if err != nil {
-		log.Fatalf("Failed to encode response data to JSON: %v", err)
-	}
+        sendResponse(uh.channel, replyTo, correlationID, "SearchUserResponse", struct {
+            Action string `json:"action"`
+            Error  string `json:"error"`
+        }{
+            Action: "SearchUserResponse",
+            Error:  "User not found",
+        })
+        return
+    }
 
-	// Publish response to the replyTo queue
-	err = uh.channel.Publish(
-		"",
-		replyTo,
-		false,
-		false,
-		amqp.Publishing{
-			ContentType:   "application/json",
-			CorrelationId: correlationID,
-			Body:          responseDataJSON,
-			Headers: amqp.Table{
-				"action": "SearchUserResponse",
-			},
-		},
-	)
-	if err != nil {
-		log.Fatalf("Failed to publish a response message: %v", err)
-	}
-
-	log.Printf("User data: %+v", user)
+    sendResponse(uh.channel, replyTo, correlationID, "SearchUserResponse",struct {
+        UserData   *models.User `json:"user_data"`
+    }{
+        UserData:   user,
+    })
 }
+
 
 
 func (uh *UserService) HandleCreateUser(data []byte, replyTo string, correlationID string) {
@@ -197,10 +178,6 @@ func (uh *UserService) HandleCreateUser(data []byte, replyTo string, correlation
         return
     }
 
-    if err != nil {
-        log.Printf("Error fetching user: %v", err)
-        return
-    }
     if existingUser != nil {
         sendResponse(uh.channel, replyTo, correlationID, "CreateUserResponse", struct {
             Error string `json:"error"`
@@ -323,7 +300,7 @@ func (uh *UserService) HandleUpdateProgress(data []byte, replyTo string, correla
         log.Printf("Error fetching user: %v", err)
         return
     }
-    
+
     if err != nil {
         log.Printf("Error fetching user: %v", err)
         return
