@@ -132,6 +132,10 @@ func (uh *UserService) HandleSearchUser(data []byte, replyTo string, correlation
 	}
 
 	user, err := uh.dynamoDBRepo.GetUserByUsername(requestData.Username)
+    if err != nil {
+        log.Printf("Error fetching user: %v", err)
+        return
+    }
 	if err != nil {
 		log.Printf("Error fetching user: %v", err)
 		return
@@ -188,6 +192,11 @@ func (uh *UserService) HandleCreateUser(data []byte, replyTo string, correlation
 
     // Check if the username already exists
     existingUser, err := uh.dynamoDBRepo.GetUserByUsername(requestData.Username)
+    if err != nil {
+        log.Printf("Error fetching user: %v", err)
+        return
+    }
+
     if err != nil {
         log.Printf("Error fetching user: %v", err)
         return
@@ -255,6 +264,10 @@ func (uh *UserService) HandleLogin(data []byte, replyTo string, correlationID st
         log.Printf("Error fetching user: %v", err)
         return
     }
+    if err != nil {
+        log.Printf("Error fetching user: %v", err)
+        return
+    }
 
     if user == nil {
         sendResponse(uh.channel, replyTo, correlationID, "LoginResponse", struct {
@@ -306,6 +319,11 @@ func (uh *UserService) HandleUpdateProgress(data []byte, replyTo string, correla
     }
 
     user, err := uh.dynamoDBRepo.GetUserByUsername(requestData.Username)
+    if err != nil {
+        log.Printf("Error fetching user: %v", err)
+        return
+    }
+    
     if err != nil {
         log.Printf("Error fetching user: %v", err)
         return

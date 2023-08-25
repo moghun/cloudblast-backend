@@ -127,7 +127,7 @@ func (repo *DynamoDBRepository) GetUserByUsername(username string) (*models.User
         return nil, err
     }
 
-    if result.Item == nil {
+    if result == nil || result.Item == nil {
         return nil, nil // User not found
     }
 
@@ -138,6 +138,7 @@ func (repo *DynamoDBRepository) GetUserByUsername(username string) (*models.User
 
     return &user, nil
 }
+
 
 
 //TOURNAMENT
@@ -313,6 +314,10 @@ func (repo *DynamoDBRepository) RegisterToTournament(username string) (int, erro
 
     // Check if the user has at least 500 coins
     user, err := repo.GetUserByUsername(username)
+    if user == nil {
+        defer repo.mu.Unlock()
+        return -1, nil
+    }
     if err != nil {
         defer repo.mu.Unlock()
         return -1, err
@@ -405,6 +410,9 @@ func (repo *DynamoDBRepository) RegisterToTournament(username string) (int, erro
 
 func (repo *DynamoDBRepository) GetLatestTournamentForUser(username string) (string, error) {
     user, err := repo.GetUserByUsername(username)
+    if user == nil {
+        return "", nil
+    }
     if err != nil {
         return "", err
     }
@@ -449,6 +457,9 @@ func (repo *DynamoDBRepository) IncrementUserScoreInTournament(username, tournam
 
     // Fetch the user's level and coins
     user, err := repo.GetUserByUsername(username)
+    if user == nil {
+        return 0, 0, 0, nil
+    }
     if err != nil {
         return 0, 0, 0, err
     }

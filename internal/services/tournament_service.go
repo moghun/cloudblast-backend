@@ -432,6 +432,14 @@ func (ts *TournamentService) HandleClaimReward(data []byte, replyTo string, corr
 		})
 		return
 	}
+	if err != nil {
+		sendResponse(ts.channel, replyTo, correlationID, "ClaimRewardResponse", struct {
+			Error string `json:"error"`
+		}{
+			Error: "Failed to get user's data",
+		})
+		return
+	}
 
 	// Update user's coin balance and mark the reward as claimed
 	err = ts.dynamoDBRepo.UpdateUserField(username, "coins", user.Coins+rewardAmount)
