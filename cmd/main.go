@@ -47,7 +47,10 @@ func main() {
 	router.HandleFunc("/api/tournament/ClaimReward", auth.AuthMiddleware(handlers.HandleClaimRewardRoute(ch))).Methods("POST")
 	router.HandleFunc("/api/tournament/GetTournamentRank", auth.AuthMiddleware(handlers.HandleGetGroupUserRankRoute(ch))).Methods("GET")
 	router.HandleFunc("/api/tournament/GetTournamentLeaderboard", auth.AuthMiddleware(handlers.HandleGetGroupLeaderboardWithRanksRoute(ch))).Methods("GET")
+	router.HandleFunc("/api/user/GetCountryLeaderboard", auth.AuthMiddleware(handlers.HandleGetCountryLeaderboardRoute(ch))).Methods("GET")
+	router.HandleFunc("/api/user/GetGlobalLeaderboard", auth.AuthMiddleware(handlers.HandleGetGlobalLeaderboardRoute(ch))).Methods("GET")
 
+	
 	//Start user service
 	userService, err := services.NewUserService(conn)
 

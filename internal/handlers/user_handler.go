@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"goodBlast-backend/internal/models"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -403,3 +404,212 @@ func HandleUpdateProgressRoute(ch *amqp.Channel) func (http.ResponseWriter, *htt
         http.Error(w, "No response received", http.StatusRequestTimeout)
     }
 }
+
+
+func HandleGetCountryLeaderboardRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var requestData struct {
+			Action   string `json:"action"`
+			Username string `json:"username"`
+		}
+
+		err := json.NewDecoder(r.Body).Decode(&requestData)
+		if err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+
+		if requestData.Username == "" {
+			http.Error(w, "Username is required", http.StatusBadRequest)
+			return
+		}
+
+		correlationID := uuid.New().String()
+
+		replyQueue, err := ch.QueueDeclare(
+			"",
+			false,
+			true,
+			true,
+			false,
+			nil,
+		)
+		if err != nil {
+			http.Error(w, "Failed to create reply queue", http.StatusInternalServerError)
+			return
+		}
+
+		msgs, err := ch.Consume(
+			replyQueue.Name,
+			"",
+			true,
+			false,
+			false,
+			false,
+			nil,
+		)
+		if err != nil {
+			http.Error(w, "Failed to set up reply consumer", http.StatusInternalServerError)
+			return
+		}
+
+		publishToRabbitMQ(ch, "userQueue", "GetCountryLeaderboard", requestData, replyQueue.Name, correlationID)
+
+		for msg := range msgs {
+			if msg.CorrelationId == correlationID {
+				var response struct {
+					Action string        `json:"action"`
+					Data   map[string][]models.User `json:"data"`
+				}
+
+				err := json.Unmarshal(msg.Body, &response)
+				if err != nil {
+					http.Error(w, "Failed to unmarshal response data", http.StatusInternalServerError)
+					return
+				}
+
+				data := response.Data
+
+                users := data["users"]
+                
+				// Prepare the response
+				tempData := struct {
+					Users []models.User `json:"data"`
+				}{
+					Users: users,
+				}
+
+                countryUsers := tempData.Users
+
+                var responseData []map[string]interface{}
+                ctr := 1
+				for _, user := range countryUsers {
+					userJSON := map[string]interface{}{
+                        "rank": ctr,
+						"country":            user.Country,
+						"username":           user.Username,
+						"progress_level":     user.Progress_Level,
+					}
+                    ctr++
+					responseData = append(responseData, userJSON)
+				}
+
+				responseDataJSON, err := json.Marshal(responseData)
+				if err != nil {
+					http.Error(w, "Failed to marshal response data", http.StatusInternalServerError)
+					return
+				}
+
+				// Set appropriate headers and status code
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				w.Write(responseDataJSON)
+				return
+			}
+		}
+
+		http.Error(w, "No response received", http.StatusRequestTimeout)
+	}
+}
+
+func HandleGetGlobalLeaderboardRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var requestData struct {
+			Action string `json:"action"`
+		}
+
+		err := json.NewDecoder(r.Body).Decode(&requestData)
+		if err != nil {
+			http.Error(w, "Invalid JSON", http.StatusBadRequest)
+			return
+		}
+
+		correlationID := uuid.New().String()
+
+		replyQueue, err := ch.QueueDeclare(
+			"",
+			false,
+			true,
+			true,
+			false,
+			nil,
+		)
+		if err != nil {
+			http.Error(w, "Failed to create reply queue", http.StatusInternalServerError)
+			return
+		}
+
+		msgs, err := ch.Consume(
+			replyQueue.Name,
+			"",
+			true,
+			false,
+			false,
+			false,
+			nil,
+		)
+		if err != nil {
+			http.Error(w, "Failed to set up reply consumer", http.StatusInternalServerError)
+			return
+		}
+
+		publishToRabbitMQ(ch, "userQueue", "GetGlobalLeaderboard", requestData, replyQueue.Name, correlationID)
+
+		for msg := range msgs {
+			if msg.CorrelationId == correlationID {
+				var response struct {
+					Action string        `json:"action"`
+					Data   map[string][]models.User `json:"data"`
+				}
+
+				err := json.Unmarshal(msg.Body, &response)
+				if err != nil {
+					http.Error(w, "Failed to unmarshal response data", http.StatusInternalServerError)
+					return
+				}
+
+				data := response.Data
+
+                users := data["users"]
+                
+				// Prepare the response
+				tempData := struct {
+					Users []models.User `json:"data"`
+				}{
+					Users: users,
+				}
+
+                globalUsers := tempData.Users
+
+                var responseData []map[string]interface{}
+                ctr := 1
+				for _, user := range globalUsers {
+					userJSON := map[string]interface{}{
+                        "rank": ctr,
+						"country":            user.Country,
+						"username":           user.Username,
+						"progress_level":     user.Progress_Level,
+					}
+                    ctr++
+					responseData = append(responseData, userJSON)
+				}
+
+				responseDataJSON, err := json.Marshal(responseData)
+				if err != nil {
+					http.Error(w, "Failed to marshal response data", http.StatusInternalServerError)
+					return
+				}
+
+				// Set appropriate headers and status code
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				w.Write(responseDataJSON)
+				return
+			}
+		}
+
+		http.Error(w, "No response received", http.StatusRequestTimeout)
+	}
+}
+
+

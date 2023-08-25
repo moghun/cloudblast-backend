@@ -622,7 +622,7 @@ func HandleGetGroupLeaderboardWithRanksRoute(ch *amqp.Channel) func(http.Respons
                     return
                 }
                 data := response.Data
-
+                
                 responseData := struct {
                     Data []map[string]interface{} `json:"data"`
                 }{
