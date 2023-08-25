@@ -422,50 +422,52 @@ func HandleClaimRewardRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Re
 
         publishToRabbitMQ(ch, "tournamentQueue", "ClaimReward", requestData, replyQueue.Name, correlationID)
 
-for msg := range msgs {
-    if msg.CorrelationId == correlationID {
-         /*
+        for msg := range msgs {
+            if msg.CorrelationId == correlationID {
+                var response struct {
+                    Action string                 `json:"action"`
+                    Data   map[string]interface{} `json:"data"`
+                }
 
-        var response struct {
-            Action string                                  `json:"action"`
-            Data   map[string][]models.UserInTournament   `json:"data"`
+                err := json.Unmarshal(msg.Body, &response)
+                if err != nil {
+                    http.Error(w, "Failed to unmarshal response data", http.StatusInternalServerError)
+                    return
+                }
+                data := response.Data
+                success, successExists := data["success"].(bool)
+                reward_claimed, reward_claimedExist := data["reward_claimed"].(float64)
+                errorVal, errorExists := data["error"].(string)
+
+                if errorExists {
+                    http.Error(w, errorVal, http.StatusInternalServerError)
+                    return
+                }
+
+                if (!successExists || !reward_claimedExist) && !errorExists {
+                    http.Error(w, "success or reward_claimed field not found in response data", http.StatusInternalServerError)
+                    return
+                }
+                responseData := struct {
+                    Success       bool `json:"success"`
+                    RewardClaimed int  `json:"reward_claimed"`
+                }{
+                    Success:       success,
+                    RewardClaimed: int(reward_claimed),
+                }
+
+                responseDataJSON, err := json.Marshal(responseData)
+                if err != nil {
+                    http.Error(w, "Failed to marshal response data", http.StatusInternalServerError)
+                    return
+                }
+
+                w.Header().Set("Content-Type", "application/json")
+                w.WriteHeader(http.StatusOK)
+                w.Write(responseDataJSON)
+                return
+            }
         }
-        err := json.Unmarshal(msg.Body, &response)
-        if err != nil {
-            http.Error(w, "Failed to unmarshal response data", http.StatusInternalServerError)
-            return
-        }
-
-       
-        data := response.Data
-
-        
-        reward, found := data["reward_claimed"]
-        if !found {
-            http.Error(w, "Ranked players data not found in response", http.StatusInternalServerError)
-            return
-        }
-
-        /*responseData := struct {
-            Reward []models.UserInTournament `json:"reward_claimed"`
-        }{
-            Reward: reward,
-        }
-        */
-
-        // responseDataJSON, err := json.Marshal(responseData)
-        if err != nil {
-            http.Error(w, "Failed to marshal response data", http.StatusInternalServerError)
-            return
-        }
-
-        w.Header().Set("Content-Type", "application/json")
-        w.WriteHeader(http.StatusOK)
-        w.Write(msg.Body)
-        return
-    }
-}
-
 
         http.Error(w, "No response received", http.StatusRequestTimeout)
     }
