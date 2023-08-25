@@ -8,4 +8,5 @@ type User struct {
 	Progress_Level   		int    	`json:"progress_level"`
 	Coins   				int    	`json:"coins"`
 	Latest_Tournament_ID 	string 	`json:"latest_tournament_id"`
+	Latest_Group_ID 		int 	`json:"latest_group_id"`
 }
