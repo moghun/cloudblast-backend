@@ -1,4 +1,4 @@
-# go-matchThree-backend# Good Blast Backend
+# Good Blast Backend
 
 ## System Overview
 
