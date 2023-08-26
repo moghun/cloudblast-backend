@@ -49,31 +49,31 @@ docker-compose up --build
 
 ## API Endpoints
 
-1. 'POST /api/tournament/StartTournament': Start a tournament - takes no parameter.
+1. `POST /api/tournament/StartTournament`: Start a tournament - takes no parameter.
 
-2. 'POST /api/tournament/EndTournament': End the current tournament, decides winners of the tournament - takes no parameter.
+2. `POST /api/tournament/EndTournament`: End the current tournament, decides winners of the tournament - takes no parameter.
 
-3. 'POST /api/user/CreateUser': Creates a new user - takes "username", "password" and "country" as parameters.
+3. `POST /api/user/CreateUser`: Creates a new user - takes "username", "password" and "country" as parameters.
 
-4. 'GET /api/user/Login': Returns a JWT token checking the password - takes "username" and "password" as parameters.
+4. `GET /api/user/Login`: Returns a JWT token checking the password - takes "username" and "password" as parameters.
 
-5. 'GET /api/user/SearchUser': Search for a user in the system - takes "username" as parameter.
+5. `GET /api/user/SearchUser`: Search for a user in the system - takes "username" as parameter.
 
-6. 'POST /api/user/UpdateProgress': Update the progress (+100 coins and +1 progress level) of a user in a tournament - takes "username" as parameter.
+6. `POST /api/user/UpdateProgress`: Update the progress (+100 coins and +1 progress level) of a user in a tournament - takes "username" as parameter.
 
-7. 'POST /api/tournament/EnterTournament': Entering the current tournament as a participant - takes "username" as parameter.
+7. `POST /api/tournament/EnterTournament`: Entering the current tournament as a participant - takes "username" as parameter.
 
-8. 'POST /api/tournament/UpdateScore': Increment the score of a user in a tournament, also increment the progress of the user - takes "username" as parameter.
+8. `POST /api/tournament/UpdateScore`: Increment the score of a user in a tournament, also increment the progress of the user - takes "username" as parameter.
 
-9. 'POST /api/tournament/ClaimReward': Claim rewards after the end of a tournament - takes "username" as parameter.
+9. `POST /api/tournament/ClaimReward`: Claim rewards after the end of a tournament - takes "username" as parameter.
 
-10. 'GET /api/tournament/GetTournamentRank': Gt the rank of a user in a specific tournament - takes "username" as parameter.
+10. `GET /api/tournament/GetTournamentRank`: Gt the rank of a user in a specific tournament - takes "username" as parameter.
 
-11. 'GET /api/tournament/GetTournamentLeaderboard': Get the leaderboard of a specific tournament, which includes the ranks and scores of all the participating users - takes "username" as parameter.
+11. `GET /api/tournament/GetTournamentLeaderboard`: Get the leaderboard of a specific tournament, which includes the ranks and scores of all the participating users - takes "username" as parameter.
 
-12. 'GET /api/user/GetCountryLeaderboard': Get the leaderboard of users from a specific country - takes "username" as parameter.
+12. `GET /api/user/GetCountryLeaderboard`: Get the leaderboard of users from a specific country - takes "username" as parameter.
 
-13. 'GET /api/user/GetGlobalLeaderboard': Get the global leaderboard of all the users in the database - takes "username" as parameter.
+13. `GET /api/user/GetGlobalLeaderboard`: Get the global leaderboard of all the users in the database - takes "username" as parameter.
 
 ## Dependencies
 
