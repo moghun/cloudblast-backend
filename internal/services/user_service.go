@@ -36,7 +36,7 @@ func NewUserService(conn *amqp.Connection) (*UserService, error) {
 	}, nil
 }
 
-func hashPassword(password string) (string, error) {
+func HashPassword(password string) (string, error) {
     hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
     if err != nil {
         return "", err
@@ -44,7 +44,7 @@ func hashPassword(password string) (string, error) {
     return string(hashedPassword), nil
 }
 
-func checkPasswordHash(password, hashedPassword string) bool {
+func CheckPasswordHash(password, hashedPassword string) bool {
     err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
     return err == nil
 }
@@ -207,7 +207,7 @@ func (uh *UserService) HandleCreateUser(data []byte, replyTo string, correlation
     }
 
     // Hash the password
-    hashedPassword, err := hashPassword(requestData.Password)
+    hashedPassword, err := HashPassword(requestData.Password)
     if err != nil {
         log.Printf("Failed to hash password: %v", err)
         return
@@ -278,7 +278,7 @@ func (uh *UserService) HandleLogin(data []byte, replyTo string, correlationID st
         return
     }
 
-    if !checkPasswordHash(requestData.Password, user.Password) {
+    if !CheckPasswordHash(requestData.Password, user.Password) {
         sendResponse(uh.channel, replyTo, correlationID, "LoginResponse", struct {
             Token  string `json:"token"`
             Success bool `json:"success"`
