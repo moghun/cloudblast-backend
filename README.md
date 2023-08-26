@@ -21,6 +21,8 @@ The system consists of four main components:
 - CronJob is used to schedule tournaments daily.
 
 ## Setup and Execution
+### Deployed Version
+http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/{ENDPOINT}
 
 ### Local execution
 
