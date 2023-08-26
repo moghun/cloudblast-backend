@@ -34,7 +34,6 @@ func main() {
 	}
 	defer ch.Close()
 
-	//Declare RabbitMQ queue
 	router := mux.NewRouter()
 	router.HandleFunc("/api/tournament/StartTournament", handlers.HandleStartTournamentRoute(ch)).Methods("POST")
 	router.HandleFunc("/api/tournament/EndTournament", handlers.HandleEndTournamentRoute(ch)).Methods("POST")
