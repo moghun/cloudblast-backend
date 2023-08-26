@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"github.com/gorilla/mux"
+	"github.com/robfig/cron"
 	"github.com/streadway/amqp"
 )
 
@@ -83,6 +84,13 @@ func main() {
 		log.Fatal(http.ListenAndServe(":8080", router))
 	}()
 
+	cronScheduler := cron.New()
+
+    // Schedule the cron job to call the endpoints
+    cronScheduler.AddFunc("@daily", CallStartTournament)
+    cronScheduler.AddFunc("59 23 * * *", CallEndTournament)
+    cronScheduler.Start()
+
 	// Stop the services and close the connection when the stopChan receives a signal
 	<-stopChan
 	fmt.Println("Main service is stopping...")
@@ -91,3 +99,54 @@ func main() {
 	leaderboardService.Stop()
 	fmt.Println("Main service stopped.")
 }
+
+func CallStartTournament() {
+	fmt.Println("Calling StartTournament endpoint...")
+	
+	client := http.Client{}
+	req, err := http.NewRequest("POST", "http://localhost:8080/api/tournament/StartTournament", nil)
+	if err != nil {
+		fmt.Printf("Error creating request: %v\n", err)
+		return
+	}
+	
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("Error sending request: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("Received status code: %d\n", resp.StatusCode)
+		return
+	}
+	
+	fmt.Println("StartTournament endpoint called successfully.")
+}
+
+func CallEndTournament() {
+	fmt.Println("Calling EndTournament endpoint...")
+	
+	client := http.Client{}
+	req, err := http.NewRequest("POST", "http://localhost:8080/api/tournament/EndTournament", nil)
+	if err != nil {
+		fmt.Printf("Error creating request: %v\n", err)
+		return
+	}
+	
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Printf("Error sending request: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+	
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("Received status code: %d\n", resp.StatusCode)
+		return
+	}
+	
+	fmt.Println("EndTournament endpoint called successfully.")
+}
+
