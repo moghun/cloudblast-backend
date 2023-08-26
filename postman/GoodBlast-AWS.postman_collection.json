@@ -1,0 +1,513 @@
+{
+	"info": {
+		"_postman_id": "41eb7c9b-c570-4a89-ac1a-84d778614575",
+		"name": "GoodBlast-AWS",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "StartTournament",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/tournament/StartTournament",
+					"protocol": "http",
+					"host": [
+						"alb-gbb-s5-2272643",
+						"eu-central-1",
+						"elb",
+						"amazonaws",
+						"com"
+					],
+					"path": [
+						"api",
+						"tournament",
+						"StartTournament"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "EndTournament",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "",
+						"value": "",
+						"type": "default",
+						"disabled": true
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/tournament/EndTournament",
+					"protocol": "http",
+					"host": [
+						"alb-gbb-s5-2272643",
+						"eu-central-1",
+						"elb",
+						"amazonaws",
+						"com"
+					],
+					"path": [
+						"api",
+						"tournament",
+						"EndTournament"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "CreateUser",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\" : \"\",\n    \"password\" : \"\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/user/CreateUser",
+					"protocol": "http",
+					"host": [
+						"alb-gbb-s5-2272643",
+						"eu-central-1",
+						"elb",
+						"amazonaws",
+						"com"
+					],
+					"path": [
+						"api",
+						"user",
+						"CreateUser"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Login",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\" : \"\",\n    \"password\" : \"\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/user/Login",
+					"protocol": "http",
+					"host": [
+						"alb-gbb-s5-2272643",
+						"eu-central-1",
+						"elb",
+						"amazonaws",
+						"com"
+					],
+					"path": [
+						"api",
+						"user",
+						"Login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "SearchUser",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\" : \"\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/user/SearchUser",
+					"protocol": "http",
+					"host": [
+						"alb-gbb-s5-2272643",
+						"eu-central-1",
+						"elb",
+						"amazonaws",
+						"com"
+					],
+					"path": [
+						"api",
+						"user",
+						"SearchUser"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "UpdateProgress",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer ",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\" : \"\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/user/UpdateProgress",
+					"protocol": "http",
+					"host": [
+						"alb-gbb-s5-2272643",
+						"eu-central-1",
+						"elb",
+						"amazonaws",
+						"com"
+					],
+					"path": [
+						"api",
+						"user",
+						"UpdateProgress"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "EnterTournament",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer ",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\" : \"\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/tournament/EnterTournament",
+					"protocol": "http",
+					"host": [
+						"alb-gbb-s5-2272643",
+						"eu-central-1",
+						"elb",
+						"amazonaws",
+						"com"
+					],
+					"path": [
+						"api",
+						"tournament",
+						"EnterTournament"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "UpdateScore",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer ",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\" : \"\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/tournament/UpdateScore",
+					"protocol": "http",
+					"host": [
+						"alb-gbb-s5-2272643",
+						"eu-central-1",
+						"elb",
+						"amazonaws",
+						"com"
+					],
+					"path": [
+						"api",
+						"tournament",
+						"UpdateScore"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "ClaimReward",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer ",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\" : \"\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/tournament/ClaimReward",
+					"protocol": "http",
+					"host": [
+						"alb-gbb-s5-2272643",
+						"eu-central-1",
+						"elb",
+						"amazonaws",
+						"com"
+					],
+					"path": [
+						"api",
+						"tournament",
+						"ClaimReward"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetTournamentRank",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer ",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\" : \"\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api//api/tournament/GetTournamentRank",
+					"protocol": "http",
+					"host": [
+						"alb-gbb-s5-2272643",
+						"eu-central-1",
+						"elb",
+						"amazonaws",
+						"com"
+					],
+					"path": [
+						"api",
+						"",
+						"api",
+						"tournament",
+						"GetTournamentRank"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetTournamentLeaderboard",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer ",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\" : \"\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/tournament/GetTournamentRank",
+					"protocol": "http",
+					"host": [
+						"alb-gbb-s5-2272643",
+						"eu-central-1",
+						"elb",
+						"amazonaws",
+						"com"
+					],
+					"path": [
+						"api",
+						"tournament",
+						"GetTournamentRank"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetCountryLeaderboard",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer ",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\" : \"\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://gbb-alb-1471718264.eu-central-1.elb.amazonaws.com/api/user/GetCountryLeaderboard",
+					"protocol": "http",
+					"host": [
+						"gbb-alb-1471718264",
+						"eu-central-1",
+						"elb",
+						"amazonaws",
+						"com"
+					],
+					"path": [
+						"api",
+						"user",
+						"GetCountryLeaderboard"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetGlobalLeaderboard",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer ",
+						"type": "default"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\" : \"\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/user/GetGlobalLeaderboard",
+					"protocol": "http",
+					"host": [
+						"alb-gbb-s5-2272643",
+						"eu-central-1",
+						"elb",
+						"amazonaws",
+						"com"
+					],
+					"path": [
+						"api",
+						"user",
+						"GetGlobalLeaderboard"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
