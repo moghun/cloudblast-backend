@@ -244,7 +244,7 @@ func (ts *TournamentService) HandleEnterTournament(data []byte, replyTo string, 
         })
         return
     }
-    if DidUserClaimReward {
+    if DidUserClaimReward == false {
         log.Printf("User already claimed reward: %v", requestData.Username)
         sendResponse(ts.channel, replyTo, correlationID, "EnterTournamentResponse", struct {
             Error string `json:"error"`

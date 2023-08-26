@@ -669,9 +669,7 @@ func (repo *DynamoDBRepository) GetLatestGroupIdForUser(username string) (int, e
 func (repo *DynamoDBRepository) DidUserClaimReward(username string) (bool, error) {
     // Get the user's latest_tournament_id
     latestTournamentID, err := repo.GetLatestTournamentForUser(username)
-    if latestTournamentID != "" {
-        return false, nil
-    }
+
     if err != nil {
         return false, err
     }
@@ -704,14 +702,17 @@ func (repo *DynamoDBRepository) DidUserClaimReward(username string) (bool, error
     }
 
     rewardClaimedAttr := result.Item["claimed"]
-    if rewardClaimedAttr == nil || rewardClaimedAttr.N == nil {
+    rankAttr := result.Item["rank"]
+
+    if rewardClaimedAttr == nil || rewardClaimedAttr.N == nil || rankAttr == nil || rankAttr.N == nil {
         return false, nil
     }
 
     rewardClaimed := *rewardClaimedAttr.N
-    return rewardClaimed == "1", nil
-}
+    rank := *rankAttr.N
 
+    return (rewardClaimed == "1" || rank == "0"), nil
+}
 // Get the top 1000 users from the same country as the given username
 func (repo *DynamoDBRepository) GetCountryLeaderboard(username string) ([]models.User, error) {
     // Get the country of the given username
