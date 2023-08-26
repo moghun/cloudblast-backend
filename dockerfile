@@ -21,8 +21,8 @@ RUN go build -o main ./cmd/main.go
 EXPOSE 8080
 
 # Set AWS credentials and region for AWS SDK
-#ENV AWS_ACCESS_KEY_ID=
-#ENV AWS_SECRET_ACCESS_KEY=
+#ENV AWS_ACCESS_KEY_ID=*
+#ENV AWS_SECRET_ACCESS_KEY=*
 
 # Download and run RabbitMQ and Redis instances
 RUN apt-get update && apt-get install -y rabbitmq-server redis-server
