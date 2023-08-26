@@ -21,7 +21,6 @@ type DynamoDBRepository struct {
 
 }
 
-//USER
 
 //NewDynamoDBRepository creates a new DynamoDB repository
 func NewDynamoDBRepository() (*DynamoDBRepository, error) {
@@ -36,6 +35,7 @@ func NewDynamoDBRepository() (*DynamoDBRepository, error) {
 	return &DynamoDBRepository{client: client}, nil
 }
 
+//USER
 //Create a new user given a user struct
 func (repo *DynamoDBRepository) CreateUser(user *models.User) error {
     av, err := dynamodbattribute.MarshalMap(user)
@@ -90,8 +90,7 @@ func (repo *DynamoDBRepository) UpdateUserField(username, fieldName string, valu
     return nil
 }
 
-
-
+// Get all users from the database
 func (repo *DynamoDBRepository) GetAllUsers() ([]models.User, error) {
     input := &dynamodb.ScanInput{
         TableName: aws.String("User"),
@@ -115,6 +114,7 @@ func (repo *DynamoDBRepository) GetAllUsers() ([]models.User, error) {
     return users, nil
 }
 
+//Get a user by username
 func (repo *DynamoDBRepository) GetUserByUsername(username string) (*models.User, error) {
     input := &dynamodb.GetItemInput{
         TableName: aws.String("User"),
@@ -139,10 +139,37 @@ func (repo *DynamoDBRepository) GetUserByUsername(username string) (*models.User
     return &user, nil
 }
 
+// Get all users in a tournament
+func (repo *DynamoDBRepository) GetUsersInTournament(tournamentID string) ([]models.UserInTournament, error) {
+    var users []models.UserInTournament
+
+    input := &dynamodb.QueryInput{
+        TableName: aws.String("UserInTournament"),
+        KeyConditionExpression: aws.String("tournament_id = :tournament_id"),
+        ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+            ":tournament_id": {S: aws.String(tournamentID)},
+        },
+    }
+
+    result, err := repo.client.Query(input)
+    if err != nil {
+        return nil, err
+    }
+
+    for _, item := range result.Items {
+        var user models.UserInTournament
+        err := dynamodbattribute.UnmarshalMap(item, &user)
+        if err != nil {
+            return nil, err
+        }
+        users = append(users, user)
+    }
+
+    return users, nil
+}
 
 
 //TOURNAMENT
-
 //Create a new tournament given a tournament struct
 func (repo *DynamoDBRepository) CreateTournament(tournament *models.Tournament) error {
 	av, err := dynamodbattribute.MarshalMap(tournament)
@@ -232,6 +259,51 @@ func (repo *DynamoDBRepository) GetTournamentByID(tournamentID string) (*models.
 	return &tournament, nil
 }
 
+//Get all tournaments from the database
+func (repo *DynamoDBRepository) GetAllTournaments() ([]models.Tournament, error) {
+    scanInput := &dynamodb.ScanInput{
+        TableName: aws.String("Tournament"),
+    }
+
+    result, err := repo.client.Scan(scanInput)
+    if err != nil {
+        return nil, err
+    }
+
+    var tournaments []models.Tournament
+    for _, item := range result.Items {
+        var tournament models.Tournament
+        err := dynamodbattribute.UnmarshalMap(item, &tournament)
+        if err != nil {
+            return nil, err
+        }
+        tournaments = append(tournaments, tournament)
+    }
+
+    return tournaments, nil
+}
+
+//Get the latest started tournament
+func (repo *DynamoDBRepository) GetLatestTournament() (string, error) {
+    tournaments, err := repo.GetAllTournaments()
+    if err != nil {
+        
+        return "", err
+    }
+
+    var latestTournamentID string
+    var latestStartTime time.Time
+
+    for _, tournament := range tournaments {
+        if tournament.StartTime.After(latestStartTime) {
+            latestStartTime = tournament.StartTime
+            latestTournamentID = tournament.TournamentID
+        }
+    }
+    return latestTournamentID, nil
+}
+
+// Get a user's UserInTournament record for a specific tournament
 func (repo *DynamoDBRepository) GetUserInTournamentByUsernameAndTournamentID(username, tournamentID string) (*models.UserInTournament, error) {
 	keyCondition := expression.Key("username").Equal(expression.Value(username)).
 		And(expression.Key("tournament_id").Equal(expression.Value(tournamentID)))
@@ -266,48 +338,10 @@ func (repo *DynamoDBRepository) GetUserInTournamentByUsernameAndTournamentID(use
 	return &userInTournament, nil
 }
 
-func (repo *DynamoDBRepository) GetAllTournaments() ([]models.Tournament, error) {
-    scanInput := &dynamodb.ScanInput{
-        TableName: aws.String("Tournament"),
-    }
-
-    result, err := repo.client.Scan(scanInput)
-    if err != nil {
-        return nil, err
-    }
-
-    var tournaments []models.Tournament
-    for _, item := range result.Items {
-        var tournament models.Tournament
-        err := dynamodbattribute.UnmarshalMap(item, &tournament)
-        if err != nil {
-            return nil, err
-        }
-        tournaments = append(tournaments, tournament)
-    }
-
-    return tournaments, nil
-}
-
-func (repo *DynamoDBRepository) GetLatestTournament() (string, error) {
-    tournaments, err := repo.GetAllTournaments()
-    if err != nil {
-        
-        return "", err
-    }
-
-    var latestTournamentID string
-    var latestStartTime time.Time
-
-    for _, tournament := range tournaments {
-        if tournament.StartTime.After(latestStartTime) {
-            latestStartTime = tournament.StartTime
-            latestTournamentID = tournament.TournamentID
-        }
-    }
-    return latestTournamentID, nil
-}
-
+// Register a user to the latest tournament
+// Returns the group ID if successful, -1 if the user is already registered, -2 if the user does not have enough coins,
+// -3 if the user is not at least level 10, and -4 if the user does not exist
+// This function is thread-safe to ensure atomicity for the number of registered users
 func (repo *DynamoDBRepository) RegisterToTournament(username string) (int, error) {
     // Lock the mutex to ensure atomicity
     repo.mu.Lock()
@@ -407,7 +441,7 @@ func (repo *DynamoDBRepository) RegisterToTournament(username string) (int, erro
     return groupID, nil
 }
 
-
+// Get a user's most recent joined tournament
 func (repo *DynamoDBRepository) GetLatestTournamentForUser(username string) (string, error) {
     user, err := repo.GetUserByUsername(username)
     if user == nil {
@@ -425,6 +459,7 @@ func (repo *DynamoDBRepository) GetLatestTournamentForUser(username string) (str
     return latestTournamentID, nil
 }
 
+// Checks wheter a tournament is finished or not
 func (repo *DynamoDBRepository) IsTournamentActive(tournamentID string) (bool, error) {
     tournament, err := repo.GetTournamentByID(tournamentID)
     if err != nil {
@@ -434,6 +469,7 @@ func (repo *DynamoDBRepository) IsTournamentActive(tournamentID string) (bool, e
     return !tournament.Finished, nil
 }
 
+// Increments both the user's progress_level and the tournament's score by 1 - adds coins
 func (repo *DynamoDBRepository) IncrementUserScoreInTournament(username, tournamentID string) (int, int, int, error) {
     updateExpression := "SET score = score + :val"
 
@@ -482,34 +518,9 @@ func (repo *DynamoDBRepository) IncrementUserScoreInTournament(username, tournam
 
     return user.Progress_Level + 1, user.Coins + 100, score, nil
 }
-func (repo *DynamoDBRepository) GetUsersInTournament(tournamentID string) ([]models.UserInTournament, error) {
-    var users []models.UserInTournament
 
-    input := &dynamodb.QueryInput{
-        TableName: aws.String("UserInTournament"),
-        KeyConditionExpression: aws.String("tournament_id = :tournament_id"),
-        ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-            ":tournament_id": {S: aws.String(tournamentID)},
-        },
-    }
 
-    result, err := repo.client.Query(input)
-    if err != nil {
-        return nil, err
-    }
-
-    for _, item := range result.Items {
-        var user models.UserInTournament
-        err := dynamodbattribute.UnmarshalMap(item, &user)
-        if err != nil {
-            return nil, err
-        }
-        users = append(users, user)
-    }
-
-    return users, nil
-}
-
+// Update a user-tournament touple information
 func (repo *DynamoDBRepository) UpdateUserInTournamentRank(username, tournamentID string, rank int) error {
     updateExpression := "SET #rk = :rank"
 
@@ -532,6 +543,7 @@ func (repo *DynamoDBRepository) UpdateUserInTournamentRank(username, tournamentI
     return err
 }
 
+// Find the top four players in the latest tournament and assign ranks to them
 func (repo *DynamoDBRepository) FindRankedPlayersForLatestTournament() ([]models.UserInTournament, error) {
     latestTournamentID, err := repo.GetLatestTournament()
     if err != nil {
@@ -582,6 +594,7 @@ func (repo *DynamoDBRepository) FindRankedPlayersForLatestTournament() ([]models
     return usersInTournament[:4], nil
 }
 
+// Find the latest tournament and set its finished field to true
 func (repo *DynamoDBRepository) EndLatestTournament() (string, error) {
     latestTournamentID, err := repo.GetLatestTournament()
     if err != nil {
@@ -598,6 +611,7 @@ func (repo *DynamoDBRepository) EndLatestTournament() (string, error) {
     return latestTournamentID, nil
 }
 
+// Mark a player's reward as claimed
 func (repo *DynamoDBRepository) UpdateUserInTournamentClaimed(username, tournamentID string, claimed bool) error {
     updateExpression := "SET #cl = :claimed"
 
@@ -620,6 +634,7 @@ func (repo *DynamoDBRepository) UpdateUserInTournamentClaimed(username, tourname
     return err
 }
 
+// Check if a tournament is finished
 func (repo *DynamoDBRepository) IsTournamentFinished(tournamentID string) (bool, error) {
     tournament, err := repo.GetTournamentByID(tournamentID)
     if err != nil {
@@ -629,7 +644,8 @@ func (repo *DynamoDBRepository) IsTournamentFinished(tournamentID string) (bool,
     return tournament.Finished, nil
 }
 
-
+// Get the user's latest group ID
+// Returns -1 if the user does not exist or -2 if the user has not registered to a tournament
 func (repo *DynamoDBRepository) GetLatestGroupIdForUser(username string) (int, error) {
     user, err := repo.GetUserByUsername(username)
     if user == nil {
@@ -649,6 +665,7 @@ func (repo *DynamoDBRepository) GetLatestGroupIdForUser(username string) (int, e
     return latest_Group_ID, nil
 }
 
+// Check whether a user has claimed the reward for the latest tournament
 func (repo *DynamoDBRepository) DidUserClaimReward(username string) (bool, error) {
     // Get the user's latest_tournament_id
     latestTournamentID, err := repo.GetLatestTournamentForUser(username)
@@ -695,6 +712,7 @@ func (repo *DynamoDBRepository) DidUserClaimReward(username string) (bool, error
     return rewardClaimed == "1", nil
 }
 
+// Get the top 1000 users from the same country as the given username
 func (repo *DynamoDBRepository) GetCountryLeaderboard(username string) ([]models.User, error) {
     // Get the country of the given username
     country, err := repo.GetCountryForUser(username)
@@ -721,7 +739,7 @@ func (repo *DynamoDBRepository) GetCountryLeaderboard(username string) ([]models
     // Filter and sort users
     var users []models.User
     for _, item := range result.Items {
-        user := models.User{} // Assuming you have a User struct
+        user := models.User{}
         err := dynamodbattribute.UnmarshalMap(item, &user)
         if err != nil {
             return nil, err
@@ -769,6 +787,7 @@ func (repo *DynamoDBRepository) GetCountryForUser(username string) (string, erro
     return *countryAttr.S, nil
 }
 
+// Get the top 1000 users globally
 func (repo *DynamoDBRepository) GetGlobalLeaderboard() ([]models.User, error) {
     // Scan all users
     input := &dynamodb.ScanInput{
@@ -783,7 +802,7 @@ func (repo *DynamoDBRepository) GetGlobalLeaderboard() ([]models.User, error) {
     // Filter and sort users
     var users []models.User
     for _, item := range result.Items {
-        user := models.User{} // Assuming you have a User struct
+        user := models.User{}
         err := dynamodbattribute.UnmarshalMap(item, &user)
         if err != nil {
             return nil, err

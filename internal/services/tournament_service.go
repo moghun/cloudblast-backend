@@ -18,6 +18,7 @@ type TournamentService struct {
 	dynamoDBRepo *repositories.DynamoDBRepository
 }
 
+// Create a new tournament service
 func NewTournamentService(conn *amqp.Connection) (*TournamentService, error) {
 	channel, err := conn.Channel()
 	if err != nil {
@@ -36,22 +37,26 @@ func NewTournamentService(conn *amqp.Connection) (*TournamentService, error) {
 	}, nil
 }
 
+// Initialize the tournament service
 func (ts *TournamentService) Start() {
 	defer ts.conn.Close()
 	defer ts.channel.Close()
 
+    // Establish RabbitMQ connection
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	if err != nil {
 		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
 	}
 	defer conn.Close()
 
+    //Start RabbitMQ channel
 	ch, err := conn.Channel()
 	if err != nil {
 		log.Fatalf("Failed to open a channel: %v", err)
 	}
 	defer ch.Close()
 
+    // Declare the "tournamentQueue" queue
 	q, err := ch.QueueDeclare(
 		"tournamentQueue",
 		false,
@@ -64,6 +69,7 @@ func (ts *TournamentService) Start() {
 		log.Fatalf("Failed to declare a queue: %v", err)
 	}
 
+    // Start consuming messages
 	msgs, err := ts.channel.Consume(
 		q.Name,
 		"",
@@ -77,6 +83,7 @@ func (ts *TournamentService) Start() {
 		log.Fatalf("Failed to register a consumer: %v", err)
 	}
 
+    // Handle messages received on the "tournamentQueue" queue
 	for msg := range msgs {
 		action, ok := msg.Headers["action"].(string)
 		if !ok {
@@ -84,6 +91,7 @@ func (ts *TournamentService) Start() {
 			continue
 		}
 
+        // Handle the message based on the action
 		switch action {
 		case "StartTournament":
 			ts.HandleStartTournament(msg.Body, msg.ReplyTo, msg.CorrelationId)
@@ -101,6 +109,7 @@ func (ts *TournamentService) Start() {
 	}
 }
 
+// Stop the tournament service
 func (ts *TournamentService) Stop() {
 	log.Println("Stopping tournament service...")
 	if err := ts.channel.Close(); err != nil {
@@ -108,7 +117,7 @@ func (ts *TournamentService) Stop() {
 	}
 }
 
-
+// Start a new tournament
 func (ts *TournamentService) HandleStartTournament(data []byte, replyTo string, correlationID string) {
 	var requestData struct {
 		Action string `json:"action"`
@@ -163,6 +172,7 @@ func (ts *TournamentService) HandleStartTournament(data []byte, replyTo string, 
 	log.Printf("Tournament started: %+v", tournament)
 }
 
+// Enter a tournament with the given username and tournament ID
 func (ts *TournamentService) HandleEnterTournament(data []byte, replyTo string, correlationID string) {
 	var requestData struct {
 		Action       string `json:"action"`
@@ -176,6 +186,8 @@ func (ts *TournamentService) HandleEnterTournament(data []byte, replyTo string, 
 		return
 	}
 
+    // Atomically increment the number of registered users in the tournament
+    // and get the latest group ID to assign to the user
 	groupID, err := ts.dynamoDBRepo.RegisterToTournament(requestData.Username)
 
 	if err != nil {
@@ -188,6 +200,7 @@ func (ts *TournamentService) HandleEnterTournament(data []byte, replyTo string, 
 		return
 	}
 
+    // Check if the user is already registered for the tournament
 	if groupID == -2 {
 		log.Printf("User is already registered for the tournament: %v", requestData.Username)
 		sendResponse(ts.channel, replyTo, correlationID, "EnterTournamentResponse", struct {
@@ -198,6 +211,7 @@ func (ts *TournamentService) HandleEnterTournament(data []byte, replyTo string, 
 		return
 	};
 
+    // Check if the user has enough coins to enter the tournament
 	if groupID == -3 {
 		log.Printf("User has not enough coins to enter the tournament: %v", requestData.Username)
 		sendResponse(ts.channel, replyTo, correlationID, "EnterTournamentResponse", struct {
@@ -208,6 +222,7 @@ func (ts *TournamentService) HandleEnterTournament(data []byte, replyTo string, 
 		return
 	}
 
+    // Check if the user has enough progress level to enter the tournament
 	if groupID == -4 {
 		log.Printf("User has not enough progress level to enter the tournament: %v", requestData.Username)
 		sendResponse(ts.channel, replyTo, correlationID, "EnterTournamentResponse", struct {
@@ -218,6 +233,7 @@ func (ts *TournamentService) HandleEnterTournament(data []byte, replyTo string, 
 		return
 	}
 
+    // Check if the user claimed reward for the previous tournament
     DidUserClaimReward, err := ts.dynamoDBRepo.DidUserClaimReward(requestData.Username)
     if err != nil {
         log.Printf("Failed to check if user claimed reward: %v", err)
@@ -228,7 +244,6 @@ func (ts *TournamentService) HandleEnterTournament(data []byte, replyTo string, 
         })
         return
     }
-
     if DidUserClaimReward {
         log.Printf("User already claimed reward: %v", requestData.Username)
         sendResponse(ts.channel, replyTo, correlationID, "EnterTournamentResponse", struct {
@@ -239,6 +254,7 @@ func (ts *TournamentService) HandleEnterTournament(data []byte, replyTo string, 
         return
     }
 
+    // Get the latest tournament ID for the user
     latestTournamentID, err := ts.dynamoDBRepo.GetLatestTournamentForUser(requestData.Username)
     if err != nil {
         sendResponse(ts.channel, replyTo, correlationID, "UpdateScoreResponse", struct {
@@ -249,9 +265,10 @@ func (ts *TournamentService) HandleEnterTournament(data []byte, replyTo string, 
         return
     }
 
+    //Create the leaderboard name
     newTournamentID := latestTournamentID + ":" + strconv.Itoa(groupID)
-    log.Printf("latestTournamentID: %v", latestTournamentID)
-    log.Printf("newTournamentID: %v\n", newTournamentID)
+
+    // Send EnterLeaderboardGroup action to LeaderboardService
     action := "EnterLeaderboardGroup"
     messageData := map[string]interface{}{
         "action"  :  action,
@@ -261,11 +278,13 @@ func (ts *TournamentService) HandleEnterTournament(data []byte, replyTo string, 
         "initial_score": 0,
     }
 
+    // Publish the message to the "leaderboardQueue" with the publishToRabbitMQ function
     publishToRabbitMQ(ts.channel, "leaderboardQueue", action, messageData, replyTo, correlationID)
     log.Printf("Sent enterLeaderboardGroup action to LeaderboardService")
 
+    // Update the user's latest group ID
     ts.dynamoDBRepo.UpdateUserField(requestData.Username, "latest_group_id", groupID)
-		
+
 	sendResponse(ts.channel, replyTo, correlationID, "EnterTournamentResponse", struct {
 		GroupID int `json:"group_id"`
 	}{
@@ -276,7 +295,7 @@ func (ts *TournamentService) HandleEnterTournament(data []byte, replyTo string, 
 	return
 }
 
-
+// Update the score of a user in the tournament
 func (ts *TournamentService) HandleUpdateScore(data []byte, replyTo string, correlationID string) {
     var requestData struct {
         Action   string `json:"action"`
@@ -289,6 +308,7 @@ func (ts *TournamentService) HandleUpdateScore(data []byte, replyTo string, corr
         return
     }
 
+    // Get the latest tournament ID for the user
     latestTournamentID, err := ts.dynamoDBRepo.GetLatestTournamentForUser(requestData.Username)
     if err != nil {
         sendResponse(ts.channel, replyTo, correlationID, "UpdateScoreResponse", struct {
@@ -299,6 +319,7 @@ func (ts *TournamentService) HandleUpdateScore(data []byte, replyTo string, corr
         return
     }
 
+    // Check if the tournament is active
     isTournamentActive, err := ts.dynamoDBRepo.IsTournamentActive(latestTournamentID)
     if err != nil {
         sendResponse(ts.channel, replyTo, correlationID, "UpdateScoreResponse", struct {
@@ -309,7 +330,7 @@ func (ts *TournamentService) HandleUpdateScore(data []byte, replyTo string, corr
         return
     }
 
-
+    // If the tournament is active, increment the user's score in the tournament
     if isTournamentActive {
         progressLevel, coins, score, err := ts.dynamoDBRepo.IncrementUserScoreInTournament(requestData.Username, latestTournamentID)
         if err != nil {
@@ -322,8 +343,10 @@ func (ts *TournamentService) HandleUpdateScore(data []byte, replyTo string, corr
             return
         }
 
+        // Get the latest group ID for the user
         latestGroupID, err := ts.dynamoDBRepo.GetLatestGroupIdForUser(requestData.Username)
 
+        // Check if the user is not assigned to any group
         if latestGroupID == -2 {
             log.Printf("Failed to get latest group id for user: %v", err)
             sendResponse(ts.channel, replyTo, correlationID, "UpdateScoreResponse", struct {
@@ -334,7 +357,6 @@ func (ts *TournamentService) HandleUpdateScore(data []byte, replyTo string, corr
             return
         }
 
-
         if err != nil {
             sendResponse(ts.channel, replyTo, correlationID, "UpdateScoreResponse", struct {
                 Error string `json:"error"`
@@ -344,8 +366,10 @@ func (ts *TournamentService) HandleUpdateScore(data []byte, replyTo string, corr
             return
         }
 
+        // Create the leaderboard name
         newLeaderboardName := latestTournamentID + ":" + strconv.Itoa(latestGroupID)
 
+        // Send IncrementGroupScore action to LeaderboardService
         action := "IncrementGroupScore" // Define the action
         messageData := map[string]interface{}{
             "action":       action,
@@ -379,7 +403,7 @@ func (ts *TournamentService) HandleUpdateScore(data []byte, replyTo string, corr
 
 }
 
-
+// End the latest tournament
 func (ts *TournamentService) EndTournament(data []byte, replyTo string, correlationID string) {
     var requestData struct {
         Action string `json:"action"`
@@ -392,6 +416,7 @@ func (ts *TournamentService) EndTournament(data []byte, replyTo string, correlat
     }
 
 
+    // End the latest tournament
     tournamentID, err := ts.dynamoDBRepo.EndLatestTournament()
     if err != nil {
         log.Printf("Failed to end latest tournament: %v", err)
@@ -403,7 +428,7 @@ func (ts *TournamentService) EndTournament(data []byte, replyTo string, correlat
         return
     }
 
-
+    // Get the ranked players for the latest tournament
     rankedPlayers, err := ts.dynamoDBRepo.FindRankedPlayersForLatestTournament()
     if err != nil {
         log.Printf("Failed to find ranked players: %v", err)
@@ -416,6 +441,7 @@ func (ts *TournamentService) EndTournament(data []byte, replyTo string, correlat
     }
 
 
+    // Send DeleteLeaderboard action to LeaderboardService
 	action := "DeleteLeaderboard" // Define the action
     messageData := map[string]interface{}{
         "action":       action,
@@ -434,6 +460,7 @@ func (ts *TournamentService) EndTournament(data []byte, replyTo string, correlat
     })
 }
 
+// Claim the reward for the latest tournament for the given username
 func (ts *TournamentService) HandleClaimReward(data []byte, replyTo string, correlationID string) {
 	var requestData struct {
         Action   string `json:"action"`
@@ -480,6 +507,7 @@ func (ts *TournamentService) HandleClaimReward(data []byte, replyTo string, corr
         return
     }
 
+    // If the tournament is not finished, return an error
     if !isTournamentFinished {
         sendResponse(ts.channel, replyTo, correlationID, "ClaimRewardResponse", struct {
             Error string `json:"error"`
@@ -500,6 +528,7 @@ func (ts *TournamentService) HandleClaimReward(data []byte, replyTo string, corr
         return
     }
 
+    // Check if the user's entry is not found in the tournament
     if userInTournament == nil {
         sendResponse(ts.channel, replyTo, correlationID, "ClaimRewardResponse", struct {
             Error string `json:"error"`
@@ -509,6 +538,7 @@ func (ts *TournamentService) HandleClaimReward(data []byte, replyTo string, corr
         return
     }
 
+    // Check if the user's reward is already claimed
     if userInTournament.Claimed {
         sendResponse(ts.channel, replyTo, correlationID, "ClaimRewardResponse", struct {
             Error string `json:"error"`
@@ -518,6 +548,7 @@ func (ts *TournamentService) HandleClaimReward(data []byte, replyTo string, corr
         return
     }
 
+    // Calculate the reward amount based on the user's rank
     var rewardAmount int
     switch userInTournament.Rank {
     case 1:
@@ -562,6 +593,7 @@ func (ts *TournamentService) HandleClaimReward(data []byte, replyTo string, corr
 		return
 	}
 
+    // Mark the reward as claimed
     err = ts.dynamoDBRepo.UpdateUserInTournamentClaimed(username, latestTournamentID, true)
     if err != nil {
         sendResponse(ts.channel, replyTo, correlationID, "ClaimRewardResponse", struct {

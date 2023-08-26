@@ -9,8 +9,10 @@ import (
 	"github.com/streadway/amqp"
 )
 
+// Handler for the /api/user/SearchUser route
 func HandleSearchUserRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Decode the request body
 		var requestData struct {
 			Action   string `json:"action"`
 			Username string `json:"username"`
@@ -22,13 +24,16 @@ func HandleSearchUserRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Req
 			return
 		}
 
+		// Check if the username is provided
 		if requestData.Username == "" {
 			http.Error(w, "Username is required", http.StatusBadRequest)
 			return
 		}
 
+		// Generate a correlation ID
 		correlationID := uuid.New().String()
 
+		// Create a reply queue
 		replyQueue, err := ch.QueueDeclare(
 			"",
 			false,
@@ -42,6 +47,7 @@ func HandleSearchUserRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Req
 			return
 		}
 
+		// Set up a consumer for the reply queue
 		msgs, err := ch.Consume(
 			replyQueue.Name,
 			"",
@@ -56,8 +62,10 @@ func HandleSearchUserRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Req
 			return
 		}
 
-		publishToRabbitMQ(ch, "userQueue", "SearchUser", requestData, replyQueue.Name, correlationID)
+		// Publish the message to the user queue
+		PublishToRabbitMQ(ch, "userQueue", "SearchUser", requestData, replyQueue.Name, correlationID)
 
+		// Wait for the response
 		for msg := range msgs {
 			if msg.CorrelationId == correlationID {
 				var response struct {
@@ -107,6 +115,7 @@ func HandleSearchUserRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Req
 	}
 }
 
+// Handler for the /api/user/CreateUser route
 func HandleCreateUserRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Request) {
     return func(w http.ResponseWriter, r *http.Request) {
         var requestData struct {
@@ -115,19 +124,23 @@ func HandleCreateUserRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Req
             Password string `json:"password"`
         }
 
+		// Decode the request body
         err := json.NewDecoder(r.Body).Decode(&requestData)
         if err != nil {
             http.Error(w, "Invalid JSON", http.StatusBadRequest)
             return
         }
 
+		// Check if the username and password are provided
         if requestData.Username == "" || requestData.Password == "" {
             http.Error(w, "Username and password are required", http.StatusBadRequest)
             return
         }
 
+		// Generate a correlation ID
         correlationID := uuid.New().String()
 
+		// Create a reply queue
         replyQueue, err := ch.QueueDeclare(
             "",
             false,
@@ -141,6 +154,7 @@ func HandleCreateUserRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Req
             return
         }
 
+		// Set up a consumer for the reply queue
         msgs, err := ch.Consume(
             replyQueue.Name,
             "",
@@ -155,8 +169,10 @@ func HandleCreateUserRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Req
             return
         }
 
-        publishToRabbitMQ(ch, "userQueue", "CreateUser", requestData, replyQueue.Name, correlationID)
+		// Publish the message to the user queue
+        PublishToRabbitMQ(ch, "userQueue", "CreateUser", requestData, replyQueue.Name, correlationID)
 
+		// Wait for the response
         for msg := range msgs {
 			if msg.CorrelationId == correlationID {
 				var response struct {
@@ -251,7 +267,7 @@ func HandleLoginRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Request)
             return
         }
 
-        publishToRabbitMQ(ch, "userQueue", "Login", requestData, replyQueue.Name, correlationID)
+        PublishToRabbitMQ(ch, "userQueue", "Login", requestData, replyQueue.Name, correlationID)
 
         for msg := range msgs {
 			if msg.CorrelationId == correlationID {
@@ -356,7 +372,7 @@ func HandleUpdateProgressRoute(ch *amqp.Channel) func (http.ResponseWriter, *htt
             return
         }
 
-        publishToRabbitMQ(ch, "userQueue", "UpdateProgress", requestData, replyQueue.Name, correlationID)
+        PublishToRabbitMQ(ch, "userQueue", "UpdateProgress", requestData, replyQueue.Name, correlationID)
 
         for msg := range msgs {
             if msg.CorrelationId == correlationID {
@@ -453,7 +469,7 @@ func HandleGetCountryLeaderboardRoute(ch *amqp.Channel) func(http.ResponseWriter
 			return
 		}
 
-		publishToRabbitMQ(ch, "userQueue", "GetCountryLeaderboard", requestData, replyQueue.Name, correlationID)
+		PublishToRabbitMQ(ch, "userQueue", "GetCountryLeaderboard", requestData, replyQueue.Name, correlationID)
 
 		for msg := range msgs {
 			if msg.CorrelationId == correlationID {
@@ -512,8 +528,10 @@ func HandleGetCountryLeaderboardRoute(ch *amqp.Channel) func(http.ResponseWriter
 	}
 }
 
+// Handler for the /api/user/GetGlobalLeaderboard route
 func HandleGetGlobalLeaderboardRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Decode the request body
 		var requestData struct {
 			Action string `json:"action"`
 		}
@@ -524,8 +542,10 @@ func HandleGetGlobalLeaderboardRoute(ch *amqp.Channel) func(http.ResponseWriter,
 			return
 		}
 
+		// Generate a correlation ID
 		correlationID := uuid.New().String()
 
+		// Create a reply queue
 		replyQueue, err := ch.QueueDeclare(
 			"",
 			false,
@@ -539,6 +559,7 @@ func HandleGetGlobalLeaderboardRoute(ch *amqp.Channel) func(http.ResponseWriter,
 			return
 		}
 
+		// Set up a consumer for the reply queue
 		msgs, err := ch.Consume(
 			replyQueue.Name,
 			"",
@@ -553,8 +574,10 @@ func HandleGetGlobalLeaderboardRoute(ch *amqp.Channel) func(http.ResponseWriter,
 			return
 		}
 
-		publishToRabbitMQ(ch, "userQueue", "GetGlobalLeaderboard", requestData, replyQueue.Name, correlationID)
+		// Publish the message to the user queue
+		PublishToRabbitMQ(ch, "userQueue", "GetGlobalLeaderboard", requestData, replyQueue.Name, correlationID)
 
+		// Wait for the response
 		for msg := range msgs {
 			if msg.CorrelationId == correlationID {
 				var response struct {

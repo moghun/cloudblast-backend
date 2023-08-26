@@ -9,8 +9,10 @@ import (
 	"github.com/streadway/amqp"
 )
 
+// Handler for the /api/tournament/StartTournament route
 func HandleStartTournamentRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Request) {
     return func(w http.ResponseWriter, r *http.Request) {
+        // Parse the request body
         var requestData struct {
             Action string `json:"action"`
         }
@@ -21,8 +23,10 @@ func HandleStartTournamentRoute(ch *amqp.Channel) func(http.ResponseWriter, *htt
             return
         }
 
+        // Generate a correlation ID for the request
         correlationID := uuid.New().String()
 
+        // Create a reply queue for the response
         replyQueue, err := ch.QueueDeclare(
             "",
             false,
@@ -36,6 +40,7 @@ func HandleStartTournamentRoute(ch *amqp.Channel) func(http.ResponseWriter, *htt
             return
         }
 
+        // Set up a consumer for the reply queue
         msgs, err := ch.Consume(
             replyQueue.Name,
             "",
@@ -50,8 +55,10 @@ func HandleStartTournamentRoute(ch *amqp.Channel) func(http.ResponseWriter, *htt
             return
         }
 
-        publishToRabbitMQ(ch, "tournamentQueue", "StartTournament", requestData, replyQueue.Name, correlationID)
+        // Publish the request to the tournament queue - send to tournament_service
+        PublishToRabbitMQ(ch, "tournamentQueue", "StartTournament", requestData, replyQueue.Name, correlationID)
 
+        // Wait for a response
         for msg := range msgs {
             if msg.CorrelationId == correlationID {
                 var response struct {
@@ -108,8 +115,10 @@ func HandleStartTournamentRoute(ch *amqp.Channel) func(http.ResponseWriter, *htt
     }
 }
 
+// Handler for the /api/tournament/GetTournament route
 func HandleEnterTournamentRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Request) {
     return func(w http.ResponseWriter, r *http.Request) {
+        // Parse the request body
         var requestData struct {
             Action       string `json:"action"`
             Username     string `json:"username"`
@@ -122,8 +131,10 @@ func HandleEnterTournamentRoute(ch *amqp.Channel) func(http.ResponseWriter, *htt
             return
         }
 
+        // Generate a correlation ID for the request
         correlationID := uuid.New().String()
 
+        // Create a reply queue for the response
         replyQueue, err := ch.QueueDeclare(
             "",
             false,
@@ -137,6 +148,7 @@ func HandleEnterTournamentRoute(ch *amqp.Channel) func(http.ResponseWriter, *htt
             return
         }
 
+        // Set up a consumer for the reply queue
         msgs, err := ch.Consume(
             replyQueue.Name,
             "",
@@ -151,8 +163,10 @@ func HandleEnterTournamentRoute(ch *amqp.Channel) func(http.ResponseWriter, *htt
             return
         }
 
-        publishToRabbitMQ(ch, "tournamentQueue", "EnterTournament", requestData, replyQueue.Name, correlationID)
+        // Publish the request to the tournament queue - send to tournament_service
+        PublishToRabbitMQ(ch, "tournamentQueue", "EnterTournament", requestData, replyQueue.Name, correlationID)
 
+        // Wait for a response
         for msg := range msgs {
             if msg.CorrelationId == correlationID {
                 var response struct {
@@ -199,8 +213,10 @@ func HandleEnterTournamentRoute(ch *amqp.Channel) func(http.ResponseWriter, *htt
     }
 }
 
+// Handler for the /api/tournament/GetTournament route
 func HandleUpdateScoreRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Request) {
     return func(w http.ResponseWriter, r *http.Request) {
+        // Parse the request body
         var requestData struct {
             Action   string `json:"action"`
             Username string `json:"username"`
@@ -212,8 +228,10 @@ func HandleUpdateScoreRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Re
             return
         }
 
+        // Generate a correlation ID for the request
         correlationID := uuid.New().String()
 
+        // Create a reply queue for the response
         replyQueue, err := ch.QueueDeclare(
             "",
             false,
@@ -227,6 +245,7 @@ func HandleUpdateScoreRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Re
             return
         }
 
+        // Set up a consumer for the reply queue
         msgs, err := ch.Consume(
             replyQueue.Name,
             "",
@@ -241,8 +260,10 @@ func HandleUpdateScoreRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Re
             return
         }
 
-        publishToRabbitMQ(ch, "tournamentQueue", "UpdateScore", requestData, replyQueue.Name, correlationID)
+        // Publish the request to the tournament queue - send to tournament_service
+        PublishToRabbitMQ(ch, "tournamentQueue", "UpdateScore", requestData, replyQueue.Name, correlationID)
 
+        // Wait for a response
         for msg := range msgs {
             if msg.CorrelationId == correlationID {
                 var response struct {
@@ -295,8 +316,10 @@ func HandleUpdateScoreRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Re
     }
 }
 
+// Handler for the /api/tournament/GetTournament route
 func HandleEndTournamentRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Request) {
     return func(w http.ResponseWriter, r *http.Request) {
+        // Parse the request body
         var requestData struct {
             Action string `json:"action"`
         }
@@ -307,8 +330,10 @@ func HandleEndTournamentRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.
             return
         }
 
+        // Generate a correlation ID for the request
         correlationID := uuid.New().String()
 
+        // Create a reply queue for the response
         replyQueue, err := ch.QueueDeclare(
             "",
             false,
@@ -322,6 +347,7 @@ func HandleEndTournamentRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.
             return
         }
 
+        // Set up a consumer for the reply queue
         msgs, err := ch.Consume(
             replyQueue.Name,
             "",
@@ -336,8 +362,10 @@ func HandleEndTournamentRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.
             return
         }
 
-        publishToRabbitMQ(ch, "tournamentQueue", "EndTournament", requestData, replyQueue.Name, correlationID)
+        // Publish the request to the tournament queue - send to tournament_service
+        PublishToRabbitMQ(ch, "tournamentQueue", "EndTournament", requestData, replyQueue.Name, correlationID)
 
+        // Wait for a response
         for msg := range msgs {
             if msg.CorrelationId == correlationID {
                 var response struct {
@@ -378,8 +406,10 @@ func HandleEndTournamentRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.
     }
 }
 
+// Handler for the /api/tournament/GetTournament route
 func HandleClaimRewardRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Request) {
     return func(w http.ResponseWriter, r *http.Request) {
+        // Parse the request body
         var requestData struct {
             Action   string `json:"action"`
             Username string `json:"username"`
@@ -391,8 +421,10 @@ func HandleClaimRewardRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Re
             return
         }
 
+        // Generate a correlation ID for the request
         correlationID := uuid.New().String()
 
+        // Create a reply queue for the response
         replyQueue, err := ch.QueueDeclare(
             "",
             false,
@@ -406,6 +438,7 @@ func HandleClaimRewardRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Re
             return
         }
 
+        // Set up a consumer for the reply queue
         msgs, err := ch.Consume(
             replyQueue.Name,
             "",
@@ -420,8 +453,10 @@ func HandleClaimRewardRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Re
             return
         }
 
-        publishToRabbitMQ(ch, "tournamentQueue", "ClaimReward", requestData, replyQueue.Name, correlationID)
+        // Publish the request to the tournament queue - send to tournament_service
+        PublishToRabbitMQ(ch, "tournamentQueue", "ClaimReward", requestData, replyQueue.Name, correlationID)
 
+        // Wait for a response
         for msg := range msgs {
             if msg.CorrelationId == correlationID {
                 var response struct {
@@ -473,8 +508,10 @@ func HandleClaimRewardRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Re
     }
 }
 
+// Handler for the /api/tournament/GetTournament route
 func HandleGetGroupUserRankRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Request) {
     return func(w http.ResponseWriter, r *http.Request) {
+        // Parse the request body
         var requestData struct {
             Action   string `json:"action"`
             Username string `json:"username"`
@@ -486,8 +523,10 @@ func HandleGetGroupUserRankRoute(ch *amqp.Channel) func(http.ResponseWriter, *ht
             return
         }
 
+        // Generate a correlation ID for the request
         correlationID := uuid.New().String()
 
+        // Create a reply queue for the response
         replyQueue, err := ch.QueueDeclare(
             "",
             false,
@@ -501,6 +540,7 @@ func HandleGetGroupUserRankRoute(ch *amqp.Channel) func(http.ResponseWriter, *ht
             return
         }
 
+        // Set up a consumer for the reply queue
         msgs, err := ch.Consume(
             replyQueue.Name,
             "",
@@ -515,8 +555,10 @@ func HandleGetGroupUserRankRoute(ch *amqp.Channel) func(http.ResponseWriter, *ht
             return
         }
 
-        publishToRabbitMQ(ch, "leaderboardQueue", "GetGroupUserRank", requestData, replyQueue.Name, correlationID)
+        // Publish the request to the tournament queue - send to tournament_service
+        PublishToRabbitMQ(ch, "leaderboardQueue", "GetGroupUserRank", requestData, replyQueue.Name, correlationID)
 
+        // Wait for a response
         for msg := range msgs {
             if msg.CorrelationId == correlationID {
                 var response struct {
@@ -565,8 +607,10 @@ func HandleGetGroupUserRankRoute(ch *amqp.Channel) func(http.ResponseWriter, *ht
     }
 }
 
+// Handler for the /api/tournament/GetTournament route
 func HandleGetGroupLeaderboardWithRanksRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Request) {
     return func(w http.ResponseWriter, r *http.Request) {
+        // Parse the request body
         var requestData struct {
             Action          string `json:"action"`
             Username string `json:"username"`
@@ -578,8 +622,10 @@ func HandleGetGroupLeaderboardWithRanksRoute(ch *amqp.Channel) func(http.Respons
             return
         }
 
+        // Generate a correlation ID for the request
         correlationID := uuid.New().String()
 
+        // Create a reply queue for the response
         replyQueue, err := ch.QueueDeclare(
             "",
             false,
@@ -593,6 +639,7 @@ func HandleGetGroupLeaderboardWithRanksRoute(ch *amqp.Channel) func(http.Respons
             return
         }
 
+        // Set up a consumer for the reply queue
         msgs, err := ch.Consume(
             replyQueue.Name,
             "",
@@ -607,8 +654,10 @@ func HandleGetGroupLeaderboardWithRanksRoute(ch *amqp.Channel) func(http.Respons
             return
         }
 
-        publishToRabbitMQ(ch, "leaderboardQueue", "GetGroupLeaderboardWithRanks", requestData, replyQueue.Name, correlationID)
+        // Publish the request to the tournament queue - send to tournament_service
+        PublishToRabbitMQ(ch, "leaderboardQueue", "GetGroupLeaderboardWithRanks", requestData, replyQueue.Name, correlationID)
 
+        // Wait for a response
         for msg := range msgs {
             if msg.CorrelationId == correlationID {
                 var response struct {

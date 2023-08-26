@@ -34,6 +34,7 @@ func (rr *RedisRepo) Close() error {
 	return rr.client.Close()
 }
 
+// Clear all keys in the database
 func (rr *RedisRepo) DeleteLeaderboards(leaderboardName string) error {
 	// Find and delete keys matching the pattern tournament_id:group_id
 	pattern := leaderboardName + ":*"
@@ -52,6 +53,7 @@ func (rr *RedisRepo) DeleteLeaderboards(leaderboardName string) error {
 
 	return nil
 }
+
 // Add a user's score to the leaderboard
 func (rr *RedisRepo) AddScoreToLeaderboard(leaderboardKey string, username string, score int) error {
 	return rr.client.ZAdd(rr.ctx, leaderboardKey, &redis.Z{
@@ -76,6 +78,7 @@ func (rr *RedisRepo) GetLeaderboardWithRanks(leaderboardKey string, start, stop 
 		return nil, err
 	}
 
+	// Convert the leaderboard to a slice of maps
 	leaderboard := make([]map[string]interface{}, len(zRange))
 	for i, z := range zRange {
 		leaderboard[i] = map[string]interface{}{
@@ -88,6 +91,7 @@ func (rr *RedisRepo) GetLeaderboardWithRanks(leaderboardKey string, start, stop 
 	return leaderboard, nil
 }
 
+// Place a given user into a leaderboard
 func (rr *RedisRepo) EnterLeaderboardGroup(leaderboardName, username string, initialScore int) error {
 	leaderboardKey := leaderboardName
 	log.Printf("Entering user %s into leaderboard %s with initial score %d", username, leaderboardKey, initialScore)
@@ -99,11 +103,13 @@ func (rr *RedisRepo) EnterLeaderboardGroup(leaderboardName, username string, ini
 	}).Err()
 }
 
+// Increment a user's score in a leaderboard
 func (rr *RedisRepo) IncrementGroupScore(leaderboardName string, username string) error {
 	leaderboardKey := leaderboardName
 	return rr.client.ZIncrBy(rr.ctx, leaderboardKey, 1, username).Err()
 }
 
+// Get the rank of a user in a leaderboard
 func (rr *RedisRepo) GetGroupUserRank(leaderboardName string, username string) (int64, error) {
 	leaderboardKey := leaderboardName
 	rank, err := rr.client.ZRevRank(rr.ctx, leaderboardKey, username).Result()
@@ -114,6 +120,7 @@ func (rr *RedisRepo) GetGroupUserRank(leaderboardName string, username string) (
 	return rank + 1, nil
 }
 
+// Get the full leaderboard with scores and ranks
 func (rr *RedisRepo) GetGroupLeaderboardWithRanks(leaderboardName string, start, stop int64) ([]map[string]interface{}, error) {
 	leaderboardKey := leaderboardName
 	zRange, err := rr.client.ZRevRangeWithScores(rr.ctx, leaderboardKey, start, stop).Result()
@@ -121,6 +128,7 @@ func (rr *RedisRepo) GetGroupLeaderboardWithRanks(leaderboardName string, start,
 		return nil, err
 	}
 
+	// Convert the leaderboard to a slice of maps
 	leaderboard := make([]map[string]interface{}, len(zRange))
 	for i, z := range zRange {
 		leaderboard[i] = map[string]interface{}{

@@ -15,9 +15,9 @@ import (
 	"github.com/streadway/amqp"
 )
 
+// Declare global variables for RabbitMQ connection and channel
 var conn *amqp.Connection
 var ch *amqp.Channel
-
 
 func main() {
 	//Start RabbitMQ connection
@@ -34,7 +34,10 @@ func main() {
 	}
 	defer ch.Close()
 
+	//Initialize router
 	router := mux.NewRouter()
+
+	//API Endpoints
 	router.HandleFunc("/api/tournament/StartTournament", handlers.HandleStartTournamentRoute(ch)).Methods("POST")
 	router.HandleFunc("/api/tournament/EndTournament", handlers.HandleEndTournamentRoute(ch)).Methods("POST")
 	router.HandleFunc("/api/user/CreateUser", handlers.HandleCreateUserRoute(ch)).Methods("POST")
@@ -52,7 +55,6 @@ func main() {
 	
 	//Start user service
 	userService, err := services.NewUserService(conn)
-
 	if err != nil {
 		log.Fatalf("Failed to initialize user_handler: %v", err)
 	}
@@ -80,6 +82,8 @@ func main() {
 		log.Println("Server is starting...")
 		log.Fatal(http.ListenAndServe(":8080", router))
 	}()
+
+	// Stop the services and close the connection when the stopChan receives a signal
 	<-stopChan
 	fmt.Println("Main service is stopping...")
 	userService.Stop()

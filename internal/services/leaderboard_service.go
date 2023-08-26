@@ -17,12 +17,14 @@ type LeaderboardService struct {
 	redisRepo   *repositories.RedisRepo
 }
 
+// Create a new leaderboard service
 func NewLeaderboardService(conn *amqp.Connection, redisAddr string) (*LeaderboardService, error) {
 	channel, err := conn.Channel()
 	if err != nil {
 		return nil, err
 	}
 
+	// Initialize DynamoDB repository
 	dynamoDBRepo, err := repositories.NewDynamoDBRepository()
 	if err != nil {
 		return nil, err
@@ -42,22 +44,26 @@ func NewLeaderboardService(conn *amqp.Connection, redisAddr string) (*Leaderboar
 	}, nil
 }
 
+// Initialize the leaderboard service
 func (ls *LeaderboardService) Start() {
 	defer ls.conn.Close()
 	defer ls.channel.Close()
 
+	// Establish RabbitMQ connection
 	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
 	if err != nil {
 		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
 	}
 	defer conn.Close()
 
+	//Start RabbitMQ channel
 	ch, err := conn.Channel()
 	if err != nil {
 		log.Fatalf("Failed to open a channel: %v", err)
 	}
 	defer ch.Close()
 
+	// Declare the leaderboard queue
 	q, err := ch.QueueDeclare(
 		"leaderboardQueue",
 		false,
@@ -70,6 +76,7 @@ func (ls *LeaderboardService) Start() {
 		log.Fatalf("Failed to declare a queue: %v", err)
 	}
 
+	// Register a consumer for the leaderboard queue
 	msgs, err := ls.channel.Consume(
 		q.Name,
 		"",
@@ -83,6 +90,7 @@ func (ls *LeaderboardService) Start() {
 		log.Fatalf("Failed to register a consumer: %v", err)
 	}
 
+	// Handle messages received on the leaderboard queue
 	for msg := range msgs {
 		action, ok := msg.Headers["action"].(string)
 		if !ok {
@@ -90,6 +98,7 @@ func (ls *LeaderboardService) Start() {
 			continue
 		}
 
+		// Handle the message based on the action
 		switch action {
 		case "DeleteLeaderboard":
 			ls.HandleDeleteLeaderboard(msg.Body, msg.ReplyTo, msg.CorrelationId)
@@ -107,7 +116,7 @@ func (ls *LeaderboardService) Start() {
 	}
 }
 
-
+// Stop the leaderboard service
 func (ls *LeaderboardService) Stop() {
 	log.Println("Stopping leaderboard service...")
 	if err := ls.channel.Close(); err != nil {
@@ -115,6 +124,7 @@ func (ls *LeaderboardService) Stop() {
 	}
 }
 
+// Delete all leaderboards
 func (ls *LeaderboardService) HandleDeleteLeaderboard(data []byte, replyTo string, correlationID string) {
 	var requestData struct {
 		Action          string `json:"action"`
@@ -136,6 +146,7 @@ func (ls *LeaderboardService) HandleDeleteLeaderboard(data []byte, replyTo strin
 	log.Printf("Deleted leaderboard %s", requestData.LeaderboardName)
 }
 
+// Enter a user into a leaderboard group
 func (ls *LeaderboardService) HandleEnterLeaderboardGroup(data []byte, replyTo string, correlationID string) {
 	var requestData struct {
 		Action          string `json:"action"`
@@ -160,6 +171,7 @@ func (ls *LeaderboardService) HandleEnterLeaderboardGroup(data []byte, replyTo s
 	log.Printf("Entered leaderboard group: %s - %s - %s - %d", requestData.GroupID, requestData.LeaderboardName, requestData.Username, requestData.InitialScore)
 }
 
+// Increment a user's score in a leaderboard
 func (ls *LeaderboardService) HandleIncrementGroupScore(data []byte, replyTo string, correlationID string) {
 	var requestData struct {
 		Action         string `json:"action"`
@@ -184,6 +196,7 @@ func (ls *LeaderboardService) HandleIncrementGroupScore(data []byte, replyTo str
 	log.Printf("Incremented score for user %s in leaderboard %s", requestData.Username, requestData.LeaderboardName)
 }
 
+// Get a user's rank in a leaderboard
 func (ls *LeaderboardService) HandleGetGroupUserRank(data []byte, replyTo string, correlationID string) {
 	var requestData struct {
 		Action         string `json:"action"`
@@ -195,12 +208,14 @@ func (ls *LeaderboardService) HandleGetGroupUserRank(data []byte, replyTo string
 		return
 	}
 
+	// Get the user's latest tournament ID
 	latestTournamentID, err := ls.dynamoDBRepo.GetLatestTournamentForUser(requestData.Username)
 	if err != nil {
 		log.Printf("Error getting latest tournament for user: %v", err)
 		return
 	}
 
+	// Get the user's latest group ID
 	latestGroupID, err := ls.dynamoDBRepo.GetLatestGroupIdForUser(requestData.Username)
 	if err != nil {
 		log.Printf("Error getting latest group ID for user: %v", err)
@@ -208,6 +223,7 @@ func (ls *LeaderboardService) HandleGetGroupUserRank(data []byte, replyTo string
 	}
 
 
+	// Create the leaderboard name
 	newLeaderboardName := latestTournamentID + ":" + strconv.Itoa(latestGroupID)
 	// Get the user's rank in the specified leaderboard
 	rank, err := ls.redisRepo.GetGroupUserRank(newLeaderboardName, requestData.Username)
@@ -226,6 +242,7 @@ func (ls *LeaderboardService) HandleGetGroupUserRank(data []byte, replyTo string
 	log.Printf("User %s rank in leaderboard %s: %d", requestData.Username, newLeaderboardName, rank)
 }
 
+// Get a leaderboard with ranks
 func (ls *LeaderboardService) HandleGetGroupLeaderboardWithRanks(data []byte, replyTo string, correlationID string) {
 	var requestData struct {
 		Action         string `json:"action"`
