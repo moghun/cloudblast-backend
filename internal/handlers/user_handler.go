@@ -634,5 +634,3 @@ func HandleGetGlobalLeaderboardRoute(ch *amqp.Channel) func(http.ResponseWriter,
 		http.Error(w, "No response received", http.StatusRequestTimeout)
 	}
 }
-
-

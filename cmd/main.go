@@ -39,6 +39,7 @@ func main() {
 	router := mux.NewRouter()
 
 	//API Endpoints
+	router.HandleFunc("/", healthCheck).Methods("GET")
 	router.HandleFunc("/api/tournament/StartTournament", handlers.HandleStartTournamentRoute(ch)).Methods("POST")
 	router.HandleFunc("/api/tournament/EndTournament", handlers.HandleEndTournamentRoute(ch)).Methods("POST")
 	router.HandleFunc("/api/user/CreateUser", handlers.HandleCreateUserRoute(ch)).Methods("POST")
@@ -148,5 +149,10 @@ func CallEndTournament() {
 	}
 	
 	fmt.Println("EndTournament endpoint called successfully.")
+}
+
+func healthCheck(w http.ResponseWriter, r *http.Request) {
+	    w.WriteHeader(http.StatusOK)
+	    w.Write([]byte("Healthy"))
 }
 
