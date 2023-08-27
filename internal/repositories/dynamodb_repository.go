@@ -675,7 +675,7 @@ func (repo *DynamoDBRepository) DidUserClaimReward(username string) (bool, error
     }
 
     if latestTournamentID == "" {
-        return false, nil
+        return true, nil
     }
 
     // Check if the user claimed the reward for the latest tournament
@@ -689,7 +689,6 @@ func (repo *DynamoDBRepository) DidUserClaimReward(username string) (bool, error
                 S: aws.String(username),
             },
         },
-        ProjectionExpression: aws.String("claimed"),
     }
 
     result, err := repo.client.GetItem(input)
@@ -704,14 +703,17 @@ func (repo *DynamoDBRepository) DidUserClaimReward(username string) (bool, error
     rewardClaimedAttr := result.Item["claimed"]
     rankAttr := result.Item["rank"]
 
-    if rewardClaimedAttr == nil || rewardClaimedAttr.N == nil || rankAttr == nil || rankAttr.N == nil {
+    log.Printf("Item: %v", result.Item)
+    if rewardClaimedAttr == nil || rewardClaimedAttr.BOOL == nil || rankAttr == nil || rankAttr.N == nil {
         return false, nil
     }
 
-    rewardClaimed := *rewardClaimedAttr.N
+    rewardClaimed := *rewardClaimedAttr.BOOL
     rank := *rankAttr.N
 
-    return (rewardClaimed == "1" || rank == "0"), nil
+    log.Printf("Reward-Rank: %v - %v", rewardClaimed, rank)
+
+    return (rewardClaimed == true || rank == "0"), nil
 }
 // Get the top 1000 users from the same country as the given username
 func (repo *DynamoDBRepository) GetCountryLeaderboard(username string) ([]models.User, error) {

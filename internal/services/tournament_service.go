@@ -186,6 +186,27 @@ func (ts *TournamentService) HandleEnterTournament(data []byte, replyTo string, 
 		return
 	}
 
+        // Check if the user claimed reward for the previous tournament
+    DidUserClaimReward, err := ts.dynamoDBRepo.DidUserClaimReward(requestData.Username)
+    if err != nil {
+        log.Printf("Failed to check if user claimed reward: %v", err)
+        sendResponse(ts.channel, replyTo, correlationID, "EnterTournamentResponse", struct {
+            Error string `json:"error"`
+        }{
+            Error: "Failed to check if user claimed reward",
+        })
+        return
+    }
+    if DidUserClaimReward == false {
+        log.Printf("User did not claimed reward: %v", requestData.Username)
+        sendResponse(ts.channel, replyTo, correlationID, "EnterTournamentResponse", struct {
+            Error string `json:"error"`
+        }{
+            Error: "User did not claim reward for previous tournament",
+        })
+        return
+    }
+
     // Atomically increment the number of registered users in the tournament
     // and get the latest group ID to assign to the user
 	groupID, err := ts.dynamoDBRepo.RegisterToTournament(requestData.Username)
@@ -232,27 +253,6 @@ func (ts *TournamentService) HandleEnterTournament(data []byte, replyTo string, 
         })
 		return
 	}
-
-    // Check if the user claimed reward for the previous tournament
-    DidUserClaimReward, err := ts.dynamoDBRepo.DidUserClaimReward(requestData.Username)
-    if err != nil {
-        log.Printf("Failed to check if user claimed reward: %v", err)
-        sendResponse(ts.channel, replyTo, correlationID, "EnterTournamentResponse", struct {
-            Error string `json:"error"`
-        }{
-            Error: "Failed to check if user claimed reward",
-        })
-        return
-    }
-    if DidUserClaimReward == false {
-        log.Printf("User already claimed reward: %v", requestData.Username)
-        sendResponse(ts.channel, replyTo, correlationID, "EnterTournamentResponse", struct {
-            Error string `json:"error"`
-        }{
-            Error: "User did not claim reward for previous tournament",
-        })
-        return
-    }
 
     // Get the latest tournament ID for the user
     latestTournamentID, err := ts.dynamoDBRepo.GetLatestTournamentForUser(requestData.Username)
