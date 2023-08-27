@@ -36,19 +36,10 @@ func (rr *RedisRepo) Close() error {
 
 // Clear all keys in the database
 func (rr *RedisRepo) DeleteLeaderboards(leaderboardName string) error {
-	// Find and delete keys matching the pattern tournament_id:group_id
-	pattern := leaderboardName + ":*"
-	iter := rr.client.Scan(rr.ctx, 0, pattern, 0).Iterator()
-	for iter.Next(rr.ctx) {
-		key := iter.Val()
-		_, err := rr.client.Del(rr.ctx, key).Result()
-		if err != nil {
-			return err
-		}
-	}
 
-	if err := iter.Err(); err != nil {
-		return err
+	status := rr.client.FlushAll(rr.ctx)
+	if status.Err() != nil {
+		return status.Err()
 	}
 
 	return nil
