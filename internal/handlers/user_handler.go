@@ -122,6 +122,7 @@ func HandleCreateUserRoute(ch *amqp.Channel) func(http.ResponseWriter, *http.Req
             Action   string `json:"action"`
             Username string `json:"username"`
             Password string `json:"password"`
+			Country  string `json:"country"`
         }
 
 		// Decode the request body
