@@ -79,7 +79,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"username\" : \"\",\n    \"password\" : \"\"\n}",
+					"raw": "{\n    \"username\" : \"\",\n    \"password\" : \"\",\n    \"country\" : \"\"\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -375,7 +375,7 @@
 					}
 				},
 				"url": {
-					"raw": "http://localhost:8080/api/tournament/GetTournamentRank",
+					"raw": "http://localhost:8080/api/tournament/GetTournamentLeaderboard",
 					"protocol": "http",
 					"host": [
 						"localhost"
@@ -384,7 +384,7 @@
 					"path": [
 						"api",
 						"tournament",
-						"GetTournamentRank"
+						"GetTournamentLeaderboard"
 					]
 				}
 			},

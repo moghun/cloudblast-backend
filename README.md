@@ -22,7 +22,7 @@ The system consists of four main components:
 
 ## Setup and Execution
 ### Deployed Version
-http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/{ENDPOINT}
+http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/{ENDPOINT}
 
 ### Local execution
 

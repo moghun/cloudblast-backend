@@ -1,6 +1,6 @@
 {
 	"info": {
-		"_postman_id": "41eb7c9b-c570-4a89-ac1a-84d778614575",
+		"_postman_id": "47464504-ab7c-4f1b-bd7f-8a7bd19ea729",
 		"name": "GoodBlast-AWS",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
@@ -20,10 +20,10 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/tournament/StartTournament",
+					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/tournament/StartTournament",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-s5-2272643",
+						"alb-gbb-v1-3-894089827",
 						"eu-central-1",
 						"elb",
 						"amazonaws",
@@ -60,10 +60,10 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/tournament/EndTournament",
+					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/tournament/EndTournament",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-s5-2272643",
+						"alb-gbb-v1-3-894089827",
 						"eu-central-1",
 						"elb",
 						"amazonaws",
@@ -85,7 +85,7 @@
 				"header": [],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n    \"username\" : \"\",\n    \"password\" : \"\"\n}",
+					"raw": "{\n    \"username\" : \"\",\n    \"password\" : \"\",\n    \"country\" : \"\"\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -93,10 +93,10 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/user/CreateUser",
+					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/user/CreateUser",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-s5-2272643",
+						"alb-gbb-v1-3-894089827",
 						"eu-central-1",
 						"elb",
 						"amazonaws",
@@ -129,10 +129,10 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/user/Login",
+					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/user/Login",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-s5-2272643",
+						"alb-gbb-v1-3-894089827",
 						"eu-central-1",
 						"elb",
 						"amazonaws",
@@ -165,10 +165,10 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/user/SearchUser",
+					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/user/SearchUser",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-s5-2272643",
+						"alb-gbb-v1-3-894089827",
 						"eu-central-1",
 						"elb",
 						"amazonaws",
@@ -204,10 +204,10 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/user/UpdateProgress",
+					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/user/UpdateProgress",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-s5-2272643",
+						"alb-gbb-v1-3-894089827",
 						"eu-central-1",
 						"elb",
 						"amazonaws",
@@ -243,10 +243,10 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/tournament/EnterTournament",
+					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/tournament/EnterTournament",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-s5-2272643",
+						"alb-gbb-v1-3-894089827",
 						"eu-central-1",
 						"elb",
 						"amazonaws",
@@ -282,10 +282,10 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/tournament/UpdateScore",
+					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/tournament/UpdateScore",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-s5-2272643",
+						"alb-gbb-v1-3-894089827",
 						"eu-central-1",
 						"elb",
 						"amazonaws",
@@ -321,10 +321,10 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/tournament/ClaimReward",
+					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/tournament/ClaimReward",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-s5-2272643",
+						"alb-gbb-v1-3-894089827",
 						"eu-central-1",
 						"elb",
 						"amazonaws",
@@ -363,18 +363,16 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api//api/tournament/GetTournamentRank",
+					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/tournament/GetTournamentRank",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-s5-2272643",
+						"alb-gbb-v1-3-894089827",
 						"eu-central-1",
 						"elb",
 						"amazonaws",
 						"com"
 					],
 					"path": [
-						"api",
-						"",
 						"api",
 						"tournament",
 						"GetTournamentRank"
@@ -407,10 +405,10 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/tournament/GetTournamentRank",
+					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/tournament/GetTournamentLeaderboard",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-s5-2272643",
+						"alb-gbb-v1-3-894089827",
 						"eu-central-1",
 						"elb",
 						"amazonaws",
@@ -419,7 +417,7 @@
 					"path": [
 						"api",
 						"tournament",
-						"GetTournamentRank"
+						"GetTournamentLeaderboard"
 					]
 				}
 			},
@@ -449,10 +447,10 @@
 					}
 				},
 				"url": {
-					"raw": "http://gbb-alb-1471718264.eu-central-1.elb.amazonaws.com/api/user/GetCountryLeaderboard",
+					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/user/GetCountryLeaderboard",
 					"protocol": "http",
 					"host": [
-						"gbb-alb-1471718264",
+						"alb-gbb-v1-3-894089827",
 						"eu-central-1",
 						"elb",
 						"amazonaws",
@@ -491,10 +489,10 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-s5-2272643.eu-central-1.elb.amazonaws.com/api/user/GetGlobalLeaderboard",
+					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/user/GetGlobalLeaderboard",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-s5-2272643",
+						"alb-gbb-v1-3-894089827",
 						"eu-central-1",
 						"elb",
 						"amazonaws",
