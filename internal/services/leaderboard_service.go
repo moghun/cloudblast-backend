@@ -222,6 +222,18 @@ func (ls *LeaderboardService) HandleGetGroupUserRank(data []byte, replyTo string
 		return
 	}
 
+	isTournamentActive, err := ls.dynamoDBRepo.IsTournamentActive(latestTournamentID)
+
+	if isTournamentActive == false {
+		log.Printf("User is not registered to an active tournament")
+		sendResponse(ls.channel, replyTo, correlationID,"GetGroupUserRankResponse", struct {
+			Error string `json:"error"`
+		}{
+			Error: "User is not registered to an active tournament",
+		})
+		return
+	}
+
 
 	// Create the leaderboard name
 	newLeaderboardName := latestTournamentID + ":" + strconv.Itoa(latestGroupID)
@@ -267,7 +279,16 @@ func (ls *LeaderboardService) HandleGetGroupLeaderboardWithRanks(data []byte, re
 		return
 	}
 
-	
+	isTournamentActive, err := ls.dynamoDBRepo.IsTournamentActive(latestTournamentID)
+
+	if isTournamentActive == false {
+		log.Printf("User is not registered to an active tournament")
+		errorMap := make([]map[string]interface{}, 1)
+		errorMap[0] = map[string]interface{}{"Error": "User is not registered to an active tournament"}
+		sendResponse(ls.channel, replyTo, correlationID,"GetGroupLeaderboardWithRanksResponse", errorMap)
+		return
+	}
+
 	newLeaderboardName := latestTournamentID + ":" + strconv.Itoa(latestGroupID)
 	log.Printf("Getting leaderboard for group %s", newLeaderboardName)
 

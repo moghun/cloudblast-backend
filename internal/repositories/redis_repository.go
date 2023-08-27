@@ -140,4 +140,3 @@ func (rr *RedisRepo) GetGroupLeaderboardWithRanks(leaderboardName string, start,
 
 	return leaderboard, nil
 }
-

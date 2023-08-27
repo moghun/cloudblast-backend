@@ -678,6 +678,12 @@ func HandleGetGroupLeaderboardWithRanksRoute(ch *amqp.Channel) func(http.Respons
                     Data: data,
                 }
 
+                errorVal, errorExists := data[0]["Error"].(string)
+                if errorExists {
+                    http.Error(w, errorVal, http.StatusInternalServerError)
+                    return
+                }
+
                 responseDataJSON, err := json.Marshal(responseData)
                 if err != nil {
                     http.Error(w, "Failed to marshal response data", http.StatusInternalServerError)
