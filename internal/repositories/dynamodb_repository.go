@@ -1,7 +1,7 @@
 package repositories
 
 import (
-	"goodBlast-backend/internal/models"
+	"cloudblast-backend/internal/models"
 	"log"
 	"sort"
 	"strconv"

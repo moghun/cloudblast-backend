@@ -2,9 +2,9 @@ package services
 
 import (
 	"encoding/json"
-	"goodBlast-backend/internal/auth"
-	"goodBlast-backend/internal/models"
-	"goodBlast-backend/internal/repositories"
+	"cloudblast-backend/internal/auth"
+	"cloudblast-backend/internal/models"
+	"cloudblast-backend/internal/repositories"
 	"log"
 
 	"github.com/google/uuid"

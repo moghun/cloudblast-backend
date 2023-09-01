@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
-	"goodBlast-backend/internal/models"
+	"cloudblast-backend/internal/models"
 	"net/http"
 
 	"github.com/google/uuid"

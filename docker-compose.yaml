@@ -1,7 +1,7 @@
 version: "3.8"
 
 services:
-  goodblast-backend:
+  cloudblast-backend:
     build:
       context: .
       dockerfile: Dockerfile
@@ -13,7 +13,7 @@ services:
     depends_on:
       - rabbitmq
       - redis
-    container_name: goodblast-backend-container
+    container_name: cloudblast-backend-container
 
   rabbitmq:
     image: rabbitmq:3.9-management

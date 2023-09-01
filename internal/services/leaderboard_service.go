@@ -5,7 +5,7 @@ import (
 	"log"
 	"strconv"
 
-	"goodBlast-backend/internal/repositories"
+	"cloudblast-backend/internal/repositories"
 
 	"github.com/streadway/amqp"
 )

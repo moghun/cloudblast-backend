@@ -1,4 +1,4 @@
-module goodBlast-backend
+module cloudblast-backend
 
 go 1.19
 

@@ -1,7 +1,7 @@
 {
 	"info": {
-		"_postman_id": "47464504-ab7c-4f1b-bd7f-8a7bd19ea729",
-		"name": "GoodBlast-AWS",
+		"_postman_id": "5bfc4a3f-1fa7-4525-8465-a0fc4d891a6c",
+		"name": "CloudBlast",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"item": [
@@ -20,15 +20,12 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/tournament/StartTournament",
+					"raw": "http://localhost:8080/api/tournament/StartTournament",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-v1-3-894089827",
-						"eu-central-1",
-						"elb",
-						"amazonaws",
-						"com"
+						"localhost"
 					],
+					"port": "8080",
 					"path": [
 						"api",
 						"tournament",
@@ -60,15 +57,12 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/tournament/EndTournament",
+					"raw": "http://localhost:8080/api/tournament/EndTournament",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-v1-3-894089827",
-						"eu-central-1",
-						"elb",
-						"amazonaws",
-						"com"
+						"localhost"
 					],
+					"port": "8080",
 					"path": [
 						"api",
 						"tournament",
@@ -93,15 +87,12 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/user/CreateUser",
+					"raw": "http://localhost:8080/api/user/CreateUser",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-v1-3-894089827",
-						"eu-central-1",
-						"elb",
-						"amazonaws",
-						"com"
+						"localhost"
 					],
+					"port": "8080",
 					"path": [
 						"api",
 						"user",
@@ -129,15 +120,12 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/user/Login",
+					"raw": "http://localhost:8080/api/user/Login",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-v1-3-894089827",
-						"eu-central-1",
-						"elb",
-						"amazonaws",
-						"com"
+						"localhost"
 					],
+					"port": "8080",
 					"path": [
 						"api",
 						"user",
@@ -165,15 +153,12 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/user/SearchUser",
+					"raw": "http://localhost:8080/api/user/SearchUser",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-v1-3-894089827",
-						"eu-central-1",
-						"elb",
-						"amazonaws",
-						"com"
+						"localhost"
 					],
+					"port": "8080",
 					"path": [
 						"api",
 						"user",
@@ -190,7 +175,7 @@
 				"header": [
 					{
 						"key": "Authorization",
-						"value": "Bearer ",
+						"value": "Bearer",
 						"type": "default"
 					}
 				],
@@ -204,15 +189,12 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/user/UpdateProgress",
+					"raw": "http://localhost:8080/api/user/UpdateProgress",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-v1-3-894089827",
-						"eu-central-1",
-						"elb",
-						"amazonaws",
-						"com"
+						"localhost"
 					],
+					"port": "8080",
 					"path": [
 						"api",
 						"user",
@@ -243,15 +225,12 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/tournament/EnterTournament",
+					"raw": "http://localhost:8080/api/tournament/EnterTournament",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-v1-3-894089827",
-						"eu-central-1",
-						"elb",
-						"amazonaws",
-						"com"
+						"localhost"
 					],
+					"port": "8080",
 					"path": [
 						"api",
 						"tournament",
@@ -282,15 +261,12 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/tournament/UpdateScore",
+					"raw": "http://localhost:8080/api/tournament/UpdateScore",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-v1-3-894089827",
-						"eu-central-1",
-						"elb",
-						"amazonaws",
-						"com"
+						"localhost"
 					],
+					"port": "8080",
 					"path": [
 						"api",
 						"tournament",
@@ -321,15 +297,12 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/tournament/ClaimReward",
+					"raw": "http://localhost:8080/api/tournament/ClaimReward",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-v1-3-894089827",
-						"eu-central-1",
-						"elb",
-						"amazonaws",
-						"com"
+						"localhost"
 					],
+					"port": "8080",
 					"path": [
 						"api",
 						"tournament",
@@ -363,15 +336,12 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/tournament/GetTournamentRank",
+					"raw": "http://localhost:8080/api/tournament/GetTournamentRank",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-v1-3-894089827",
-						"eu-central-1",
-						"elb",
-						"amazonaws",
-						"com"
+						"localhost"
 					],
+					"port": "8080",
 					"path": [
 						"api",
 						"tournament",
@@ -405,15 +375,12 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/tournament/GetTournamentLeaderboard",
+					"raw": "http://localhost:8080/api/tournament/GetTournamentLeaderboard",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-v1-3-894089827",
-						"eu-central-1",
-						"elb",
-						"amazonaws",
-						"com"
+						"localhost"
 					],
+					"port": "8080",
 					"path": [
 						"api",
 						"tournament",
@@ -447,15 +414,12 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/user/GetCountryLeaderboard",
+					"raw": "http://localhost:8080/api/user/GetCountryLeaderboard",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-v1-3-894089827",
-						"eu-central-1",
-						"elb",
-						"amazonaws",
-						"com"
+						"localhost"
 					],
+					"port": "8080",
 					"path": [
 						"api",
 						"user",
@@ -489,15 +453,12 @@
 					}
 				},
 				"url": {
-					"raw": "http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/user/GetGlobalLeaderboard",
+					"raw": "http://localhost:8080/api/user/GetGlobalLeaderboard",
 					"protocol": "http",
 					"host": [
-						"alb-gbb-v1-3-894089827",
-						"eu-central-1",
-						"elb",
-						"amazonaws",
-						"com"
+						"localhost"
 					],
+					"port": "8080",
 					"path": [
 						"api",
 						"user",
