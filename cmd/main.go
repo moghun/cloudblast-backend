@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
+	"cloudblast-backend/internal/auth"
+	"cloudblast-backend/internal/handlers"
+	"cloudblast-backend/internal/services"
+	"encoding/json"
 	"fmt"
-	"goodBlast-backend/internal/auth"
-	"goodBlast-backend/internal/handlers"
-	"goodBlast-backend/internal/services"
 	"log"
 	"net/http"
 	"os"
@@ -88,8 +90,8 @@ func main() {
 	cronScheduler := cron.New()
 
     // Schedule the cron job to call the endpoints
-    cronScheduler.AddFunc("@daily", CallStartTournament)
-    cronScheduler.AddFunc("59 23 * * *", CallEndTournament)
+    cronScheduler.AddFunc("0 0 * * *", CallStartTournament)
+    cronScheduler.AddFunc("23 59 * * *", CallEndTournament)
     cronScheduler.Start()
 
 	// Stop the services and close the connection when the stopChan receives a signal
@@ -103,53 +105,63 @@ func main() {
 
 func CallStartTournament() {
 	fmt.Println("Calling StartTournament endpoint...")
-	
-	client := http.Client{}
-	req, err := http.NewRequest("POST", "http://localhost:8080/api/tournament/StartTournament", nil)
+
+
+	requestBody, err := json.Marshal(map[string]interface{}{})
+	if err != nil {
+		fmt.Printf("Error marshaling JSON: %v\n", err)
+		return
+	}
+
+	req, err := http.NewRequest("POST", "http://localhost:8080/api/tournament/StartTournament", bytes.NewBuffer(requestBody))
 	if err != nil {
 		fmt.Printf("Error creating request: %v\n", err)
 		return
 	}
-	
+
+	req.Header.Set("Content-Type", "application/json")
+
+	client := http.DefaultClient
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Printf("Error sending request: %v\n", err)
 		return
 	}
 	defer resp.Body.Close()
-	
-	if resp.StatusCode != http.StatusOK {
-		fmt.Printf("Received status code: %d\n", resp.StatusCode)
-		return
-	}
-	
-	fmt.Println("StartTournament endpoint called successfully.")
+
+	fmt.Println("StartTournament API Response Status:", resp.Status)
+	// Add your response handling logic here
 }
 
 func CallEndTournament() {
 	fmt.Println("Calling EndTournament endpoint...")
-	
-	client := http.Client{}
-	req, err := http.NewRequest("POST", "http://localhost:8080/api/tournament/EndTournament", nil)
+
+	requestBody, err := json.Marshal(map[string]interface{}{})
+	if err != nil {
+		fmt.Printf("Error marshaling JSON: %v\n", err)
+		return
+	}
+
+	req, err := http.NewRequest("POST", "http://localhost:8080/api/tournament/EndTournament", bytes.NewBuffer(requestBody))
 	if err != nil {
 		fmt.Printf("Error creating request: %v\n", err)
 		return
 	}
-	
+
+	req.Header.Set("Content-Type", "application/json")
+
+	client := http.DefaultClient
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Printf("Error sending request: %v\n", err)
 		return
 	}
 	defer resp.Body.Close()
-	
-	if resp.StatusCode != http.StatusOK {
-		fmt.Printf("Received status code: %d\n", resp.StatusCode)
-		return
-	}
-	
-	fmt.Println("EndTournament endpoint called successfully.")
+
+	fmt.Println("EndTournament API Response Status:", resp.Status)
+	// Add your response handling logic here
 }
+
 
 func healthCheck(w http.ResponseWriter, r *http.Request) {
 	    w.WriteHeader(http.StatusOK)
