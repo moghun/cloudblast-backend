@@ -1,8 +1,8 @@
-# Good Blast Backend
+# Cloud Blast Backend
 
 ## System Overview
 
-Good Blast backend system is designed using the microservices architecture.
+Cloud Blast backend system is designed using the microservices architecture.
 
 The system consists of four main components:
 
@@ -21,8 +21,6 @@ The system consists of four main components:
 - CronJob is used to schedule tournaments daily.
 
 ## Setup and Execution
-### Deployed Version
-http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/{ENDPOINT}
 
 ### Local execution
 
@@ -30,13 +28,13 @@ http://alb-gbb-v1-3-894089827.eu-central-1.elb.amazonaws.com/api/{ENDPOINT}
 2.
 
 ```sh
-go build -o goodblast-backend cmd/main.go
+go build -o cloudblast-backend cmd/main.go
 ```
 
 3.
 
 ```sh
-./goodblast-backend
+./cloudblast-backend
 ```
 
 ### Dockerized execution
